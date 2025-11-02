@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>React Dashboard - Geothermal Monitoring</title>
+  
+  <!-- React via CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <!-- Babel for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  
+  <!-- React-Chartjs-2 adapter -->
+  <script src="https://cdn.jsdelivr.net/npm/react-chartjs-2@5.2.0/dist/index.umd.min.js"></script>
+  
+  <!-- Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; height: 100%; }
+    body {
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      background: #f5f7fa;
+      color: #1a202c;
+    }
+    
+    #root { min-height: 100vh; }
+    
+    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+    
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    
+    .logo { font-size: 24px; font-weight: 700; color: #4c51bf; }
+    .subtitle { color: #718096; font-size: 14px; }
+    
+    .nav-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .nav-tab {
+      padding: 12px 24px;
+      border: none;
+      background: white;
+      cursor: pointer;
+      border-radius: 8px;
+      font-weight: 600;
+      color: #718096;
+      transition: all 0.2s;
+    }
+    
+    .nav-tab:hover { background: #f7fafc; color: #4c51bf; }
+    .nav-tab.active { background: #4c51bf; color: white; }
+    
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    
+    .kpi-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border: 1px solid #e2e8f0;
+    }
+    
+    .kpi-card h4 {
+      font-size: 12px;
+      font-weight: 600;
+      color: #718096;
+      margin: 0 0 10px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .kpi-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: #2d3748;
+      margin: 0;
+    }
+    
+    .chart-container {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      position: relative;
+      height: 450px;
+      width: 100%;
+    }
+    
+    .chart-container canvas {
+      max-height: 400px !important;
+      width: 100% !important;
+    }
+    
+    .chart-container h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0 0 20px 0;
+      color: #2d3748;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .date-selector {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .date-input {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    
+    .date-input label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #718096;
+    }
+    
+    .date-input input {
+      padding: 10px;
+      border: 1px solid #cbd5e0;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    
+    .dark-mode {
+      background: #0b1220;
+      color: #e6edf7;
+    }
+    
+    .dark-mode .kpi-card {
+      background: #121a2b;
+      border-color: #1f2a44;
+      color: #e6edf7;
+    }
+    
+    .dark-mode .chart-container {
+      background: #121a2b;
+      border-color: #1f2a44;
+    }
+    
+    .risk-indicator {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      font-weight: 700;
+      border: 8px solid;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+    
+    .risk-low {
+      background: #1db954;
+      border-color: #16a085;
+      color: white;
+    }
+    
+    .risk-medium {
+      background: #f59e0b;
+      border-color: #d97706;
+      color: white;
+    }
+    
+    .risk-high {
+      background: #ef4444;
+      border-color: #dc2626;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+    
+    // Mock data generator
+    const generateMockData = (startDate, endDate, points) => {
+      const dates = [];
+      const injFlow = [];
+      const injWhp = [];
+      const magnitude = [];
+      const yellow = [];
+      const orange = [];
+      const red = [];
+      
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const timeRange = end - start;
+      
+      for (let i = 0; i < points; i++) {
+        const date = new Date(start.getTime() + (i / points) * timeRange);
+        dates.push(date.toISOString().split('T')[0]);
+        
+        injFlow.push(Math.random() * 1.2 + 0.3);
+        injWhp.push(Math.random() * 1.5 + 0.4);
+        magnitude.push(Math.random() * 3 - 1);
+        
+        const trend = (i / points) * 80;
+        yellow.push(Math.max(0, Math.min(80, trend + Math.random() * 15 - 5)));
+        orange.push(Math.max(0, Math.min(60, trend * 0.6 + Math.random() * 10 - 3)));
+        red.push(Math.max(0, Math.min(30, trend * 0.3 + Math.random() * 5 - 1)));
+      }
+      
+      return { dates, injFlow, injWhp, magnitude, yellow, orange, red };
+    };
+    
+    // KPI Card Component
+    function KPICard({ title, value, color }) {
+      return (
+        <div className="kpi-card">
+          <h4>{title}</h4>
+          <p className="kpi-value" style={{ color }}>{value}</p>
+        </div>
+      );
+    }
+    
+    // Operational Dashboard Component
+    function OperationalDashboard() {
+      const [startDate, setStartDate] = useState('2018-12-01');
+      const [endDate, setEndDate] = useState('2025-09-22');
+      const chartRef = useRef(null);
+      const [chartInstance, setChartInstance] = useState(null);
+      
+      useEffect(() => {
+        // Wait a bit to ensure DOM is ready
+        const timer = setTimeout(() => {
+          const ctx = document.getElementById('operationalChart');
+          if (!ctx) {
+            console.log('Canvas not found, retrying...');
+            return;
+          }
+          
+          // Destroy existing chart
+          if (chartInstance) {
+            chartInstance.destroy();
+          }
+          
+          const data = generateMockData(startDate, endDate, 500);
+          const filteredLabels = data.dates.filter((_, i) => i % 50 === 0);
+          
+          const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: filteredLabels,
+              datasets: [
+                {
+                  label: 'Injection Flow [m³/h]',
+                  data: data.injFlow.filter((_, i) => i % 50 === 0),
+                  borderColor: 'rgb(59, 130, 246)',
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  borderWidth: 2,
+                  tension: 0.1,
+                  yAxisID: 'y'
+                },
+                {
+                  label: 'Injection Pressure [bar]',
+                  data: data.injWhp.filter((_, i) => i % 50 === 0),
+                  borderColor: 'rgb(16, 185, 129)',
+                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                  borderWidth: 2,
+                  tension: 0.1,
+                  yAxisID: 'y'
+                },
+                {
+                  label: 'Magnitude',
+                  data: data.magnitude.filter((_, i) => i % 50 === 0),
+                  borderColor: 'rgb(34, 197, 94)',
+                  backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                  borderWidth: 2,
+                  pointRadius: 3,
+                  yAxisID: 'y1'
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: {
+                mode: 'index',
+                intersect: false,
+              },
+              plugins: {
+                legend: {
+                  display: true,
+                  position: 'top',
+                }
+              },
+              scales: {
+                x: {
+                  display: true,
+                  title: {
+                    display: true,
+                    text: 'Time [UTC]'
+                  }
+                },
+                y: {
+                  type: 'linear',
+                  display: true,
+                  position: 'left',
+                  title: {
+                    display: true,
+                    text: 'Flow/Pressure'
+                  }
+                },
+                y1: {
+                  type: 'linear',
+                  display: true,
+                  position: 'right',
+                  title: {
+                    display: true,
+                    text: 'Magnitude'
+                  },
+                  grid: {
+                    drawOnChartArea: false
+                  }
+                }
+              }
+            }
+          });
+          
+          setChartInstance(chart);
+        }, 100);
+        
+        return () => {
+          clearTimeout(timer);
+          if (chartInstance) {
+            chartInstance.destroy();
+          }
+        };
+      }, [startDate, endDate]);
+      
+      return (
+        <div>
+          <h2>Operational & Seismic Activity</h2>
+          
+          <div className="kpis">
+            <KPICard title="Seismic Events" value="358" color="#3b82f6" />
+            <KPICard title="Max Magnitude" value="2.1" color="#ef4444" />
+            <KPICard title="Avg Flow Rate" value="7.35" color="#10b981" />
+            <KPICard title="Avg Pressure" value="24.3" color="#f59e0b" />
+          </div>
+          
+          <div className="date-selector">
+            <div className="date-input">
+              <label>Start Date</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+            <div className="date-input">
+              <label>End Date</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <div className="chart-container">
+            <h3>Operational Metrics Over Time</h3>
+            <canvas id="operationalChart"></canvas>
+          </div>
+        </div>
+      );
+    }
+    
+    // Risk Dashboard Component
+    function RiskDashboard() {
+      const chartRef = useRef(null);
+      const [chartInstance, setChartInstance] = useState(null);
+      
+      useEffect(() => {
+        const timer = setTimeout(() => {
+          const ctx = document.getElementById('riskChart');
+          if (!ctx) {
+            console.log('Risk chart canvas not found, retrying...');
+            return;
+          }
+          
+          if (chartInstance) {
+            chartInstance.destroy();
+          }
+          
+          const data = generateMockData('2023-07-01', '2025-07-31', 730);
+          const filteredLabels = data.dates.filter((_, i) => i % 30 === 0);
+          
+          const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: filteredLabels,
+              datasets: [
+                {
+                  label: 'p_7d_yellow',
+                  data: data.yellow.filter((_, i) => i % 30 === 0),
+                  borderColor: 'rgb(251, 191, 36)',
+                  backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                  borderWidth: 3,
+                  tension: 0.3,
+                  fill: true
+                },
+                {
+                  label: 'p_7d_orange',
+                  data: data.orange.filter((_, i) => i % 30 === 0),
+                  borderColor: 'rgb(249, 115, 22)',
+                  backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                  borderWidth: 3,
+                  tension: 0.3,
+                  fill: true
+                },
+                {
+                  label: 'p_7d_red',
+                  data: data.red.filter((_, i) => i % 30 === 0),
+                  borderColor: 'rgb(239, 68, 68)',
+                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                  borderWidth: 3,
+                  tension: 0.3,
+                  fill: true
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: {
+                mode: 'index',
+                intersect: false,
+              },
+              plugins: {
+                legend: {
+                  display: true,
+                  position: 'top',
+                }
+              },
+              scales: {
+                x: {
+                  display: true,
+                  title: {
+                    display: true,
+                    text: 'Time'
+                  }
+                },
+                y: {
+                  display: true,
+                  title: {
+                    display: true,
+                    text: 'Probability [%]'
+                  },
+                  min: 0,
+                  max: 80
+                }
+              }
+            }
+          });
+          
+          setChartInstance(chart);
+        }, 100);
+        
+        return () => {
+          clearTimeout(timer);
+          if (chartInstance) {
+            chartInstance.destroy();
+          }
+        };
+      }, []);
+      
+      return (
+        <div>
+          <h2>Seismic Risk & Prediction</h2>
+          
+          <div className="kpis">
+            <KPICard title="Current Risk" value="MEDIUM" color="#f59e0b" />
+            <KPICard title="Yellow Probability" value="45%" color="#fbbf24" />
+            <KPICard title="Orange Probability" value="28%" color="#f97316" />
+            <KPICard title="Red Probability" value="12%" color="#ef4444" />
+          </div>
+          
+          <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
+            <div className="chart-container" style={{ flex: 2 }}>
+              <h3>7-Day Probability Forecast</h3>
+              <canvas id="riskChart"></canvas>
+            </div>
+            
+            <div className="chart-container" style={{ flex: 1 }}>
+              <h3>Risk Indicator</h3>
+              <div className="risk-indicator risk-medium">⚠️</div>
+              <div style={{ textAlign: 'center', color: '#f59e0b', fontWeight: 600 }}>
+                MEDIUM RISK
+              </div>
+              <div style={{ marginTop: '20px', fontSize: '12px', color: '#8fa3c8', textAlign: 'center' }}>
+                Monitor injection rates closely
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    // Main App Component
+    function App() {
+      const [activeTab, setActiveTab] = useState('operational');
+      
+      return (
+        <div className="container">
+          <header>
+            <div>
+              <div className="logo">Geothermal Plant Monitoring</div>
+              <div className="subtitle">React Dashboard - Operational & Seismic Analysis</div>
+            </div>
+          </header>
+          
+          <div className="nav-tabs">
+            <button
+              className={`nav-tab ${activeTab === 'operational' ? 'active' : ''}`}
+              onClick={() => setActiveTab('operational')}
+            >
+              Operational Dashboard
+            </button>
+            <button
+              className={`nav-tab ${activeTab === 'risk' ? 'active' : ''}`}
+              onClick={() => setActiveTab('risk')}
+            >
+              Risk Dashboard
+            </button>
+          </div>
+          
+          {activeTab === 'operational' && <OperationalDashboard />}
+          {activeTab === 'risk' && <RiskDashboard />}
+          
+          <div style={{ textAlign: 'center', color: '#718096', fontSize: '12px', marginTop: '20px' }}>
+            React Dashboard powered by Chart.js
+          </div>
+        </div>
+      );
+    }
+    
+    // Render the app
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
+

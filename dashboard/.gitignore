@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Node
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data files - DO NOT PUSH TO GITHUB
+# All CSV files are excluded (too large, sensitive data)
+*.csv
+data/
+assets/data/
+
+# Keep folder structure with placeholder
+!data/.gitkeep
+!data/README.md
+
+# Sprint review and deploy guide (internal documents)
+docs/sprint_review.md
+DEPLOY_GUIDE.md
+SETUP_COMPLETE.md
+
+# Temporary files
+*.tmp
+*.log
+*.cache
+
+# Build
+dist/
+build/
+
+# Environment
+.env
+.env.local
