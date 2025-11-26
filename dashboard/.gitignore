@@ -51,7 +51,8 @@ SETUP_COMPLETE.md
 models/*.h5
 models/*.pkl
 
-# Presentation files (keep PRESENTATION_NOTES.md for presentation)
+# Presentation and documentation files
+PRESENTATION_NOTES.md
 FRONTEND_PRESENTATION_SLIDES.md
 FRONTEND_SLIDES_CONCISE.md
 START_DASHBOARD.md
