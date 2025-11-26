@@ -34,10 +34,31 @@ assets/data/
 !data/.gitkeep
 !data/README.md
 
+# Model files - DO NOT PUSH (too large, ~100MB+)
+*.h5
+*.pkl
+models/*.h5
+models/*.pkl
+
 # Sprint review and deploy guide (internal documents)
 docs/sprint_review.md
 DEPLOY_GUIDE.md
 SETUP_COMPLETE.md
+
+# Model files - DO NOT PUSH (too large, ~100MB+)
+*.h5
+*.pkl
+models/*.h5
+models/*.pkl
+
+# Presentation files (keep PRESENTATION_NOTES.md for presentation)
+FRONTEND_PRESENTATION_SLIDES.md
+FRONTEND_SLIDES_CONCISE.md
+START_DASHBOARD.md
+TROUBLESHOOTING.md
+*.pdf
+*.pptx
+image/
 
 # Temporary files
 *.tmp

@@ -1,24 +1,55 @@
 <!DOCTYPE html>
+<!--
+  ============================================================================
+  GEOTHERMAL PLANT MONITORING DASHBOARD
+  ============================================================================
+  
+  Purpose: Real-time monitoring and seismic risk prediction dashboard for 
+           geothermal power plant operations.
+  
+  Features:
+  - Operational metrics visualization (flow, pressure, temperature)
+  - Seismic activity monitoring (magnitude, event counts)
+  - LSTM-based 7-day risk forecast
+  - Interactive time-series charts with zoom/pan
+  - Real-time data from CSV files via Flask API
+  - Metric selection checkboxes for customizable views
+  
+  Tech Stack:
+  - Frontend: React 18 (CDN), Chart.js 4.4, Babel (JSX transpilation)
+  - Backend: Flask API with TensorFlow/Keras LSTM model
+  - Data: CSV files (operational_metrics.csv, seismic_events.csv)
+  
+  Author: Data Science Project - Hasselt University
+  Date: 2025
+  ============================================================================
+-->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>React Dashboard - Geothermal Monitoring</title>
   
-  <!-- React via CDN -->
+  <!-- React 18 via CDN - Core UI framework -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   
-  <!-- Babel for JSX -->
+  <!-- Babel Standalone - Transpiles JSX to JavaScript in browser -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   
-  <!-- Chart.js -->
+  <!-- Chart.js 4.4 - Time-series data visualization -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   
-  <!-- React-Chartjs-2 adapter -->
+  <!-- Chart.js Zoom Plugin - Enables zoom and pan interactions -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+  
+  <!-- React-Chartjs-2 adapter - React wrapper for Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/react-chartjs-2@5.2.0/dist/index.umd.min.js"></script>
   
-  <!-- Font -->
+  <!-- PapaParse - CSV file parsing (for client-side data loading if needed) -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  
+  <!-- Google Fonts - Inter font family for modern UI -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   
   <style>
@@ -129,6 +160,12 @@
       margin-bottom: 20px;
     }
     
+    @media (max-width: 768px) {
+      .date-selector {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
     .date-input {
       display: flex;
       flex-direction: column;
@@ -201,173 +238,813 @@
   <div id="root"></div>
 
   <script type="text/babel">
+    // Wait for React to be fully loaded
+    if (typeof React === 'undefined') {
+      console.error('React is not loaded!');
+      document.getElementById('root').innerHTML = '<div style="padding: 20px;">Loading React...</div>';
+    }
+    
     const { useState, useEffect, useRef } = React;
     
-    // Mock data generator
-    const generateMockData = (startDate, endDate, points) => {
-      const dates = [];
-      const injFlow = [];
-      const injWhp = [];
-      const magnitude = [];
-      const yellow = [];
-      const orange = [];
-      const red = [];
-      
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      const timeRange = end - start;
-      
-      for (let i = 0; i < points; i++) {
-        const date = new Date(start.getTime() + (i / points) * timeRange);
-        dates.push(date.toISOString().split('T')[0]);
-        
-        injFlow.push(Math.random() * 1.2 + 0.3);
-        injWhp.push(Math.random() * 1.5 + 0.4);
-        magnitude.push(Math.random() * 3 - 1);
-        
-        const trend = (i / points) * 80;
-        yellow.push(Math.max(0, Math.min(80, trend + Math.random() * 15 - 5)));
-        orange.push(Math.max(0, Math.min(60, trend * 0.6 + Math.random() * 10 - 3)));
-        red.push(Math.max(0, Math.min(30, trend * 0.3 + Math.random() * 5 - 1)));
+    // API Client
+    const API_BASE_URL = 'http://localhost:5000';
+    
+    // ============================================================================
+    // API CLIENT CLASS
+    // ============================================================================
+    // Handles all communication with the Flask backend API
+    // Provides methods for health checks, data fetching, and model predictions
+    // ============================================================================
+    class SeismicRiskAPI {
+      constructor(baseURL = API_BASE_URL) {
+        // API base URL - points to Flask server running on port 5000
+        this.baseURL = baseURL;
       }
       
-      return { dates, injFlow, injWhp, magnitude, yellow, orange, red };
-    };
+      async healthCheck() {
+        try {
+          const response = await fetch(`${this.baseURL}/health`);
+          return await response.json();
+        } catch (error) {
+          return { status: 'error', error: error.message };
+        }
+      }
+      
+      /**
+       * Request 7-day seismic risk forecast from LSTM model
+       * @param {string} startDate - Starting date for forecast (ISO format)
+       * @param {Array} historicalData - Last 24 hours of operational data for model input
+       * @returns {Array} 7-day forecast with risk levels and probabilities
+       */
+      async getForecast(startDate, historicalData) {
+        try {
+          // Prepare payload for LSTM model prediction
+          const payload = {
+            start_date: startDate,
+            historical_data: historicalData, // Last 24 hours needed for LSTM lookback
+          };
+          // Call Flask API endpoint: POST /predict/forecast
+          const response = await fetch(`${this.baseURL}/predict/forecast`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Forecast failed');
+          }
+          const result = await response.json();
+          return result.forecast; // Returns array of 7 forecast days
+        } catch (error) {
+          console.error('Forecast error:', error);
+          throw error;
+        }
+      }
+      
+      /**
+       * Fetch operational metrics data (flow, pressure, temperature) for a date range
+       * @param {string} startDate - Start date/time in ISO format
+       * @param {string} endDate - End date/time in ISO format
+       * @param {number} limit - Maximum number of records to return (default: 1000)
+       * @returns {Array} Array of operational data records
+       */
+      async getOperationalData(startDate, endDate, limit = 1000) {
+        try {
+          // Build query parameters for date range filtering
+          const params = new URLSearchParams({
+            start_date: startDate,
+            end_date: endDate,
+            limit: limit.toString()
+          });
+          // Call Flask API endpoint: GET /data/operational
+          const response = await fetch(`${this.baseURL}/data/operational?${params}`);
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to load operational data');
+          }
+          const result = await response.json();
+          return result.data; // Return the data array
+        } catch (error) {
+          console.error('Operational data error:', error);
+          throw error;
+        }
+      }
+      
+      /**
+       * Fetch seismic events data (magnitude, location) for a date range
+       * @param {string} startDate - Start date/time in ISO format
+       * @param {string} endDate - End date/time in ISO format
+       * @returns {Array} Array of seismic event records
+       */
+      async getSeismicData(startDate, endDate) {
+        try {
+          const params = new URLSearchParams({
+            start_date: startDate,
+            end_date: endDate
+          });
+          const response = await fetch(`${this.baseURL}/data/seismic?${params}`);
+          if (!response.ok) {
+            // If 404, return empty array instead of throwing
+            if (response.status === 404) {
+              console.warn('⚠️ No seismic data found for this date range');
+              return [];
+            }
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to load seismic data');
+          }
+          const result = await response.json();
+          return result.data || [];
+        } catch (error) {
+          console.warn('⚠️ Seismic data error:', error.message);
+          // Return empty array instead of throwing - allows dashboard to continue
+          return [];
+        }
+      }
+    }
+    
+    const api = new SeismicRiskAPI();
+    
+    // CSV Data Loader with streaming for large files
+    async function loadCSVData(url, sampleSize = null) {
+      try {
+        console.log(`Loading CSV: ${url}...`);
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        // For large files, read in chunks
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let text = '';
+        let chunk;
+        
+        // Read first chunk to check size
+        chunk = await reader.read();
+        if (chunk.done) {
+          throw new Error('Empty file');
+        }
+        
+        text += decoder.decode(chunk.value, { stream: true });
+        
+        // If file is large and we want to sample, read only part of it
+        if (sampleSize) {
+          let bytesRead = chunk.value.length;
+          const maxBytes = sampleSize * 1024 * 1024; // Convert MB to bytes
+          
+          while (!chunk.done && bytesRead < maxBytes) {
+            chunk = await reader.read();
+            if (!chunk.done) {
+              text += decoder.decode(chunk.value, { stream: true });
+              bytesRead += chunk.value.length;
+            }
+          }
+          console.log(`Sampled ${(bytesRead / 1024 / 1024).toFixed(2)}MB from ${url}`);
+        } else {
+          // Read entire file
+          while (!chunk.done) {
+            chunk = await reader.read();
+            if (!chunk.done) {
+              text += decoder.decode(chunk.value, { stream: true });
+            }
+          }
+        }
+        
+        return new Promise((resolve, reject) => {
+          Papa.parse(text, {
+            header: true,
+            skipEmptyLines: true,
+            complete: (results) => {
+              console.log(`✅ Loaded ${results.data.length} records from ${url}`);
+              resolve(results.data);
+            },
+            error: (error) => {
+              console.error(`❌ Parse error for ${url}:`, error);
+              reject(error);
+            }
+          });
+        });
+      } catch (error) {
+        console.error(`❌ Error loading CSV from ${url}:`, error.message);
+        return [];
+      }
+    }
+    
+    // Load and prepare real data for API
+    async function loadRealHistoricalData() {
+      try {
+        // Load operational metrics (sample 10MB for browser - file is 222MB!)
+        console.log('📊 Loading real CSV data...');
+        const operationalData = await loadCSVData('data/operational_metrics.csv', 10); // Sample 10MB
+        const seismicData = await loadCSVData('data/seismic_events.csv'); // Full file (89KB)
+        
+        if (!operationalData || operationalData.length === 0) {
+          console.warn('No operational data loaded');
+          return null;
+        }
+        
+        // Get last 24 hours of data
+        // Since we sampled the file, take last records and ensure we have enough
+        const recentData = operationalData.length >= 24 
+          ? operationalData.slice(-24) 
+          : operationalData.slice(-operationalData.length);
+        
+        console.log(`📈 Using ${recentData.length} records for prediction`);
+        
+        // Group seismic events by hour
+        const seismicByHour = {};
+        seismicData.forEach(event => {
+          if (event.occurred_at) {
+            const hour = new Date(event.occurred_at).toISOString().slice(0, 13) + ':00:00';
+            if (!seismicByHour[hour]) {
+              seismicByHour[hour] = { count: 0, magnitudes: [], pgvs: [] };
+            }
+            seismicByHour[hour].count++;
+            if (event.magnitude) seismicByHour[hour].magnitudes.push(parseFloat(event.magnitude));
+            if (event.pgv_max) seismicByHour[hour].pgvs.push(parseFloat(event.pgv_max));
+          }
+        });
+        
+        // Format data for API (last 24 hours)
+        const formattedData = recentData.map(record => {
+          const timestamp = record.recorded_at || record.timestamp;
+          const hour = timestamp ? new Date(timestamp).toISOString().slice(0, 13) + ':00:00' : null;
+          const seismic = hour ? seismicByHour[hour] : null;
+          
+          return {
+            timestamp: timestamp || new Date().toISOString(),
+            inj_flow: parseFloat(record.inj_flow) || 0,
+            inj_whp: parseFloat(record.inj_whp) || 0,
+            inj_temp: parseFloat(record.inj_temp) || 0,
+            prod_temp: parseFloat(record.prod_temp) || 0,
+            prod_whp: parseFloat(record.prod_whp) || 0,
+            event_count: seismic ? seismic.count : 0,
+            max_magnitude: seismic && seismic.magnitudes.length > 0 ? Math.max(...seismic.magnitudes) : 0,
+            avg_magnitude: seismic && seismic.magnitudes.length > 0 ? 
+              seismic.magnitudes.reduce((a, b) => a + b, 0) / seismic.magnitudes.length : 0,
+            max_pgv: seismic && seismic.pgvs.length > 0 ? Math.max(...seismic.pgvs) : 0,
+            avg_pgv: seismic && seismic.pgvs.length > 0 ? 
+              seismic.pgvs.reduce((a, b) => a + b, 0) / seismic.pgvs.length : 0,
+          };
+        });
+        
+        // Ensure we have exactly 24 hours of data
+        if (formattedData.length < 24) {
+          console.warn(`Only ${formattedData.length} records, padding with last values`);
+          while (formattedData.length < 24) {
+            formattedData.unshift(formattedData[0] || formattedData[formattedData.length - 1]);
+          }
+        }
+        
+        return formattedData.slice(-24); // Return last 24 hours
+      } catch (error) {
+        console.error('Error loading real data:', error);
+        return null;
+      }
+    }
     
     // KPI Card Component
-    function KPICard({ title, value, color }) {
+    function KPICard({ title, value, color, subtitle }) {
       return (
-        <div className="kpi-card">
-          <h4>{title}</h4>
-          <p className="kpi-value" style={{ color }}>{value}</p>
+        <div className="kpi-card" style={{
+          background: 'white',
+          borderRadius: '12px',
+          padding: '20px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          transition: 'transform 0.2s, box-shadow 0.2s',
+          border: `2px solid ${color}20`
+        }}>
+          <h4 style={{ 
+            fontSize: '13px', 
+            color: '#64748b', 
+            margin: '0 0 8px 0',
+            fontWeight: '600',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px'
+          }}>
+            {title}
+          </h4>
+          <p className="kpi-value" style={{ 
+            color, 
+            fontSize: '32px',
+            fontWeight: '700',
+            margin: '0',
+            lineHeight: '1.2'
+          }}>
+            {value}
+          </p>
+          {subtitle && (
+            <p style={{ fontSize: '11px', color: '#94a3b8', margin: '8px 0 0 0' }}>
+              {subtitle}
+            </p>
+          )}
         </div>
       );
     }
     
-    // Operational Dashboard Component
+    // ============================================================================
+    // OPERATIONAL DASHBOARD COMPONENT
+    // ============================================================================
+    // Main component for displaying operational metrics and seismic activity
+    // Features:
+    // - Date/time range selection for data filtering
+    // - Metric checkboxes for customizable chart views
+    // - Real-time data loading from Flask API
+    // - Interactive time-series charts with zoom/pan
+    // - KPI cards showing summary statistics
+    // ============================================================================
     function OperationalDashboard() {
-      const [startDate, setStartDate] = useState('2018-12-01');
-      const [endDate, setEndDate] = useState('2025-09-22');
-      const chartRef = useRef(null);
-      const [chartInstance, setChartInstance] = useState(null);
+      // State management for date/time range selection
+      const [startDate, setStartDate] = useState('2018-11-28');  // Default start date
+      const [startTime, setStartTime] = useState('00:00');        // Default start time
+      const [endDate, setEndDate] = useState('2018-12-02');      // Default end date
+      const [endTime, setEndTime] = useState('23:59');           // Default end time
       
+      // API connection status tracking
+      const [apiStatus, setApiStatus] = useState('checking');    // 'checking' | 'connected' | 'disconnected'
+      const [usingRealData, setUsingRealData] = useState(false); // Whether real CSV data is loaded
+      const [loading, setLoading] = useState(false);            // Loading state for async operations
+      
+      // Metric visibility toggles - controls which metrics appear on chart
+      const [visibleMetrics, setVisibleMetrics] = useState({
+        injFlow: true,        // Total injection flow rate [m³/h]
+        basinFlow: false,     // Basin injection flow rate [m³/h]
+        injWhp: true,         // Injection Wellhead Pressure [bar]
+        injAp: false,         // Injection Annular Pressure [bar]
+        prodWhp: false,       // Production Wellhead Pressure [bar]
+        gt03Whp: false,       // GT03 Wellhead Pressure [bar]
+        injTemp: false,       // Injection Wellhead Temperature [°C]
+        prodTemp: false,      // Production Wellhead Temperature [°C]
+        magnitude: true,      // Seismic magnitude (scatter plot)
+        phases: false,       // Show operational phases
+        ptls: false,         // Show PTLS probability lines (yellow/orange/red)
+        injEnergy: false,    // Injected Energy [MWh]
+        extractedEnergy: false, // Extracted Energy [MWh]
+        heatExchPower: false,   // Heat Exchanger Thermal Power [kW]
+        heatExchEnergy: false   // Heat Exchanger Energy [MWh]
+      });
+      const [kpiData, setKpiData] = useState({
+        totalEvents: 0,
+        maxMagnitude: 0,
+        avgFlow: 0,
+        avgPressure: 0
+      });
+      const chartRef = useRef(null);
+      const chartInstanceRef = useRef(null);
+      
+      // ============================================================================
+      // API HEALTH CHECK
+      // ============================================================================
+      // Runs once on component mount to verify Flask API is running
+      // Checks if LSTM model is loaded and ready for predictions
+      // ============================================================================
       useEffect(() => {
-        // Wait a bit to ensure DOM is ready
-        const timer = setTimeout(() => {
-          const ctx = document.getElementById('operationalChart');
-          if (!ctx) {
-            console.log('Canvas not found, retrying...');
+        api.healthCheck().then(result => {
+          if (result.status === 'healthy' && result.model_loaded) {
+            setApiStatus('connected');
+            console.log('✅ API Connected - Model loaded:', result.model_loaded);
+          } else {
+            setApiStatus('disconnected');
+            console.log('⚠️ API not available - Please start the API server');
+          }
+        }).catch(() => {
+          setApiStatus('disconnected');
+          console.log('⚠️ API not available - Please start the API server');
+        });
+      }, []); // Empty dependency array = run only once on mount
+      
+      // ============================================================================
+      // DATA LOADING EFFECT
+      // ============================================================================
+      // Fetches operational and seismic data from API when:
+      // - Date/time range changes
+      // - API connection status changes
+      // Processes data and updates chart with real CSV data
+      // ============================================================================
+      useEffect(() => {
+        const loadData = async () => {
+          // Only try to load from API if it's connected
+          if (apiStatus !== 'connected') {
+            console.log('⏸️ API not connected - No data will be displayed');
+            setUsingRealData(false);
+            setLoading(false);
             return;
           }
           
-          // Destroy existing chart
-          if (chartInstance) {
-            chartInstance.destroy();
-          }
-          
-          const data = generateMockData(startDate, endDate, 500);
-          const filteredLabels = data.dates.filter((_, i) => i % 50 === 0);
-          
-          const chart = new Chart(ctx, {
-            type: 'line',
-            data: {
-              labels: filteredLabels,
-              datasets: [
-                {
-                  label: 'Injection Flow [m³/h]',
-                  data: data.injFlow.filter((_, i) => i % 50 === 0),
-                  borderColor: 'rgb(59, 130, 246)',
-                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                  borderWidth: 2,
-                  tension: 0.1,
-                  yAxisID: 'y'
-                },
-                {
-                  label: 'Injection Pressure [bar]',
-                  data: data.injWhp.filter((_, i) => i % 50 === 0),
-                  borderColor: 'rgb(16, 185, 129)',
-                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                  borderWidth: 2,
-                  tension: 0.1,
-                  yAxisID: 'y'
-                },
-                {
-                  label: 'Magnitude',
-                  data: data.magnitude.filter((_, i) => i % 50 === 0),
-                  borderColor: 'rgb(34, 197, 94)',
-                  backgroundColor: 'rgba(34, 197, 94, 0.2)',
-                  borderWidth: 2,
-                  pointRadius: 3,
-                  yAxisID: 'y1'
+          setLoading(true);
+          try {
+            console.log('📊 Loading operational data from API...');
+            // Combine date and time for API call
+            const startDateTime = `${startDate}T${startTime}:00`;
+            const endDateTime = `${endDate}T${endTime}:59`;
+            const operationalData = await api.getOperationalData(startDateTime, endDateTime, 500);
+            const seismicData = await api.getSeismicData(startDateTime, endDateTime) || [];
+            
+            if (operationalData && operationalData.length > 0) {
+              setUsingRealData(true);
+              console.log(`✅ Loaded ${operationalData.length} operational records and ${seismicData.length} seismic events`);
+              
+              // Debug: Log sample data
+              console.log('📊 Sample operational data:', operationalData.slice(0, 3));
+              console.log('📊 Date range requested:', startDateTime, 'to', endDateTime);
+              
+              // Calculate KPIs - include all values, not just > 0
+              const flows = operationalData.map(d => d.inj_flow).filter(v => v !== null && v !== undefined && !isNaN(v));
+              const pressures = operationalData.map(d => d.inj_whp).filter(v => v !== null && v !== undefined && !isNaN(v));
+              const magnitudes = seismicData.map(d => d.magnitude).filter(v => v !== null && v !== undefined && !isNaN(v) && v !== 0);
+              
+              console.log('📊 Flow values sample:', flows.slice(0, 5));
+              console.log('📊 Pressure values sample:', pressures.slice(0, 5));
+              
+              // Calculate averages including all valid values (even if some are 0)
+              const avgFlow = flows.length > 0 ? (flows.reduce((a, b) => a + b, 0) / flows.length).toFixed(2) : '0.0';
+              const avgPressure = pressures.length > 0 ? (pressures.reduce((a, b) => a + b, 0) / pressures.length).toFixed(2) : '0.0';
+              
+              // For max magnitude, only use non-zero values
+              const maxMag = magnitudes.length > 0 ? Math.max(...magnitudes).toFixed(2) : '0.0';
+              
+              setKpiData({
+                totalEvents: seismicData.length,
+                maxMagnitude: maxMag,
+                avgFlow: avgFlow,
+                avgPressure: avgPressure
+              });
+              
+              // Prepare chart data - use full timestamp for proper date handling
+              const dates = operationalData.map(d => {
+                const ts = d.timestamp;
+                if (!ts) return null;
+                try {
+                  const date = new Date(ts);
+                  return date.toISOString().split('T')[0];
+                } catch (e) {
+                  console.warn('Invalid timestamp:', ts);
+                  return null;
                 }
-              ]
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              interaction: {
-                mode: 'index',
-                intersect: false,
-              },
-              plugins: {
-                legend: {
-                  display: true,
-                  position: 'top',
+              }).filter(d => d !== null);
+              
+              const injFlow = operationalData.map(d => parseFloat(d.inj_flow) || 0);
+              const injWhp = operationalData.map(d => parseFloat(d.inj_whp) || 0);
+              
+              console.log('📊 Chart dates range:', dates[0], 'to', dates[dates.length - 1]);
+              console.log('📊 Chart data points:', dates.length);
+              
+              // Match seismic events to dates
+              const magnitudeByDate = {};
+              seismicData.forEach(event => {
+                const date = new Date(event.timestamp).toISOString().split('T')[0];
+                if (!magnitudeByDate[date] || event.magnitude > magnitudeByDate[date]) {
+                  magnitudeByDate[date] = event.magnitude;
                 }
-              },
-              scales: {
-                x: {
-                  display: true,
-                  title: {
-                    display: true,
-                    text: 'Time [UTC]'
-                  }
-                },
-                y: {
-                  type: 'linear',
-                  display: true,
-                  position: 'left',
-                  title: {
-                    display: true,
-                    text: 'Flow/Pressure'
-                  }
-                },
-                y1: {
-                  type: 'linear',
-                  display: true,
-                  position: 'right',
-                  title: {
-                    display: true,
-                    text: 'Magnitude'
+              });
+              const magnitude = dates.map(date => magnitudeByDate[date] || 0);
+              
+              // Update chart
+              const ctx = document.getElementById('operationalChart');
+              if (ctx) {
+                // Destroy existing chart first
+                if (chartInstanceRef.current) {
+                  chartInstanceRef.current.destroy();
+                  chartInstanceRef.current = null;
+                }
+                
+                // Sample data for performance (every Nth point)
+                const sampleRate = Math.max(1, Math.floor(dates.length / 100));
+                const sampledDates = dates.filter((_, i) => i % sampleRate === 0);
+                const sampledFlow = injFlow.filter((_, i) => i % sampleRate === 0);
+                const sampledPressure = injWhp.filter((_, i) => i % sampleRate === 0);
+                const sampledMagnitude = magnitude.filter((_, i) => i % sampleRate === 0);
+                
+                // Build datasets based on visible metrics
+                const datasets = [];
+                if (visibleMetrics.injFlow) {
+                  datasets.push({
+                    label: 'Injection Flow [m³/h]',
+                    data: sampledFlow,
+                    borderColor: 'rgb(59, 130, 246)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.1,
+                    yAxisID: 'y'
+                  });
+                }
+                if (visibleMetrics.injWhp) {
+                  datasets.push({
+                    label: 'Injection Pressure [bar]',
+                    data: sampledPressure,
+                    borderColor: 'rgb(16, 185, 129)',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.1,
+                    yAxisID: 'y'
+                  });
+                }
+                if (visibleMetrics.magnitude) {
+                  // Create scatter plot data - only show non-zero magnitudes
+                  const magnitudePoints = sampledMagnitude
+                    .map((val, idx) => val !== 0 ? {x: idx, y: val} : null)
+                    .filter(p => p !== null);
+                  
+                  datasets.push({
+                    label: 'Luckett Magnitude',
+                    data: magnitudePoints.length > 0 ? magnitudePoints : sampledMagnitude.map((val, idx) => ({x: idx, y: val})),
+                    borderColor: 'rgb(34, 197, 94)',
+                    backgroundColor: 'rgba(34, 197, 94, 0.8)',
+                    borderWidth: 0,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    showLine: false,
+                    yAxisID: 'y1'
+                  });
+                }
+                
+                // Add PTLS probability lines if enabled
+                if (visibleMetrics.ptls) {
+                  const ptlsYellow = sampledDates.map(() => 0);
+                  const ptlsOrange = sampledDates.map(() => 0);
+                  const ptlsRed = sampledDates.map(() => 0);
+                  
+                  datasets.push({
+                    label: 'p_7d_yellow',
+                    data: ptlsYellow,
+                    borderColor: 'rgb(251, 191, 36)',
+                    backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true,
+                    yAxisID: 'y2'
+                  });
+                  datasets.push({
+                    label: 'p_7d_orange',
+                    data: ptlsOrange,
+                    borderColor: 'rgb(249, 115, 22)',
+                    backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true,
+                    yAxisID: 'y2'
+                  });
+                  datasets.push({
+                    label: 'p_7d_red',
+                    data: ptlsRed,
+                    borderColor: 'rgb(239, 68, 68)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true,
+                    yAxisID: 'y2'
+                  });
+                }
+                
+                const chart = new Chart(ctx, {
+                  type: 'line',
+                  data: {
+                    labels: sampledDates,
+                    datasets: datasets
                   },
-                  grid: {
-                    drawOnChartArea: false
+                  options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                      mode: 'index',
+                      intersect: false,
+                    },
+                    plugins: {
+                      legend: {
+                        display: true,
+                        position: 'top',
+                      },
+                      title: {
+                        display: true,
+                        text: 'Operational Metrics Over Time (Real Data)'
+                      },
+                      zoom: {
+                        zoom: {
+                          wheel: {
+                            enabled: true,
+                          },
+                          pinch: {
+                            enabled: true
+                          },
+                          mode: 'xy',
+                        },
+                        pan: {
+                          enabled: true,
+                          mode: 'xy',
+                        }
+                      }
+                    },
+                    scales: {
+                      x: {
+                        display: true,
+                        title: {
+                          display: true,
+                          text: 'Time [UTC]'
+                        }
+                      },
+                      y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                          display: true,
+                          text: 'Flow/Pressure'
+                        }
+                      },
+                      y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                          display: true,
+                          text: 'Luckett Magnitude'
+                        },
+                        grid: {
+                          drawOnChartArea: false
+                        }
+                      },
+                      y2: {
+                        type: 'linear',
+                        display: visibleMetrics.ptls,
+                        position: 'right',
+                        title: {
+                          display: true,
+                          text: 'PTLS Probability [%]'
+                        },
+                        min: 0,
+                        max: 80,
+                        grid: {
+                          drawOnChartArea: false
+                        }
+                      }
+                    }
                   }
-                }
+                });
+                
+                chartInstanceRef.current = chart;
               }
+            } else {
+              throw new Error('No data received');
             }
-          });
-          
-          setChartInstance(chart);
-        }, 100);
-        
-        return () => {
-          clearTimeout(timer);
-          if (chartInstance) {
-            chartInstance.destroy();
+          } catch (error) {
+            console.error('❌ Real data loading failed:', error.message);
+            setUsingRealData(false);
+            // Show error but don't use mock data
+          } finally {
+            setLoading(false);
           }
         };
-      }, [startDate, endDate]);
+        
+        loadData();
+      }, [startDate, startTime, endDate, endTime, apiStatus]);
+      
+      // Update chart when visible metrics change (without reloading data)
+      useEffect(() => {
+        if (!chartInstanceRef.current || !usingRealData || loading) return;
+        
+        const chart = chartInstanceRef.current;
+        if (!chart.data || !chart.data.datasets) return;
+        
+        // Get all original datasets (we'll store them in a ref or recreate from chart config)
+        // For now, just update visibility
+        chart.data.datasets.forEach(dataset => {
+          if (dataset.label === 'Injection Flow [m³/h]') {
+            dataset.hidden = !visibleMetrics.injFlow;
+          } else if (dataset.label === 'Injection Pressure [bar]') {
+            dataset.hidden = !visibleMetrics.injWhp;
+          } else if (dataset.label === 'Luckett Magnitude') {
+            dataset.hidden = !visibleMetrics.magnitude;
+          } else if (dataset.label === 'p_7d_yellow' || dataset.label === 'p_7d_orange' || dataset.label === 'p_7d_red') {
+            dataset.hidden = !visibleMetrics.ptls;
+          }
+        });
+        
+        chart.update();
+      }, [visibleMetrics, usingRealData, loading]);
+      
+      // Cleanup chart on unmount
+      useEffect(() => {
+        return () => {
+          if (chartInstanceRef.current) {
+            chartInstanceRef.current.destroy();
+            chartInstanceRef.current = null;
+          }
+        };
+      }, []);
       
       return (
         <div>
           <h2>Operational & Seismic Activity</h2>
           
+          {apiStatus === 'connected' && usingRealData && (
+            <div style={{ 
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+              color: 'white', 
+              padding: '15px 20px', 
+              borderRadius: '8px', 
+              marginBottom: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+            }}>
+              <div>
+                <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '4px' }}>
+                  📊 Real Data Connected
+                </div>
+                <div style={{ fontSize: '18px', fontWeight: '600' }}>
+                  Loading operational metrics from CSV files
+                </div>
+              </div>
+              {loading && (
+                <div style={{ 
+                  background: 'rgba(255,255,255,0.2)', 
+                  padding: '8px 16px', 
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '600'
+                }}>
+                  Loading...
+                </div>
+              )}
+            </div>
+          )}
+          
+          {apiStatus === 'disconnected' && (
+            <div style={{ 
+              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', 
+              color: 'white', 
+              padding: '15px 20px', 
+              borderRadius: '8px', 
+              marginBottom: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+            }}>
+              <div>
+                <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '4px' }}>
+                  ⚠️ API Not Connected
+                </div>
+                <div style={{ fontSize: '18px', fontWeight: '600' }}>
+                  Please start the API server to view real data
+                </div>
+                <div style={{ fontSize: '12px', opacity: 0.9, marginTop: '8px' }}>
+                  Run: <code style={{ background: 'rgba(0,0,0,0.2)', padding: '2px 6px', borderRadius: '4px' }}>cd api && python app.py</code>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {apiStatus === 'checking' && (
+            <div style={{ 
+              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', 
+              color: 'white', 
+              padding: '15px 20px', 
+              borderRadius: '8px', 
+              marginBottom: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+            }}>
+              <div>
+                <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '4px' }}>
+                  🔄 Checking API Connection...
+                </div>
+                <div style={{ fontSize: '18px', fontWeight: '600' }}>
+                  Connecting to API server
+                </div>
+              </div>
+            </div>
+          )}
+          
           <div className="kpis">
-            <KPICard title="Seismic Events" value="358" color="#3b82f6" />
-            <KPICard title="Max Magnitude" value="2.1" color="#ef4444" />
-            <KPICard title="Avg Flow Rate" value="7.35" color="#10b981" />
-            <KPICard title="Avg Pressure" value="24.3" color="#f59e0b" />
+            <KPICard 
+              title="Seismic Events" 
+              value={kpiData.totalEvents.toString()} 
+              color="#3b82f6"
+              subtitle={usingRealData ? "From CSV data" : "No data"}
+            />
+            <KPICard 
+              title="Max Magnitude" 
+              value={kpiData.maxMagnitude} 
+              color="#ef4444"
+              subtitle={usingRealData ? "Real events" : "No data"}
+            />
+            <KPICard 
+              title="Avg Flow Rate" 
+              value={kpiData.avgFlow} 
+              color="#10b981"
+              subtitle={usingRealData ? "m³/h" : "No data"}
+            />
+            <KPICard 
+              title="Avg Pressure" 
+              value={kpiData.avgPressure} 
+              color="#f59e0b"
+              subtitle={usingRealData ? "bar" : "No data"}
+            />
           </div>
           
           <div className="date-selector">
@@ -380,6 +1057,14 @@
               />
             </div>
             <div className="date-input">
+              <label>Start Time</label>
+              <input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+              />
+            </div>
+            <div className="date-input">
               <label>End Date</label>
               <input
                 type="date"
@@ -387,141 +1072,785 @@
                 onChange={(e) => setEndDate(e.target.value)}
               />
             </div>
+            <div className="date-input">
+              <label>End Time</label>
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <div style={{ 
+            background: 'white', 
+            padding: '15px', 
+            borderRadius: '8px', 
+            marginBottom: '20px',
+            border: '1px solid #e2e8f0'
+          }}>
+            <label style={{ 
+              display: 'block', 
+              marginBottom: '10px', 
+              fontWeight: '600', 
+              fontSize: '14px',
+              color: '#2d3748'
+            }}>
+              Select Metrics to Display:
+            </label>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+              gap: '12px' 
+            }}>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={visibleMetrics.injFlow}
+                  onChange={(e) => setVisibleMetrics({...visibleMetrics, injFlow: e.target.checked})}
+                  style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span>Total injection flow rate [m³/h]</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={visibleMetrics.basinFlow}
+                  onChange={(e) => setVisibleMetrics({...visibleMetrics, basinFlow: e.target.checked})}
+                  style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span>Basin injection flow rate [m³/h]</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={visibleMetrics.injWhp}
+                  onChange={(e) => setVisibleMetrics({...visibleMetrics, injWhp: e.target.checked})}
+                  style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span>Injection Wellhead Pressure [bar]</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={visibleMetrics.injAp}
+                  onChange={(e) => setVisibleMetrics({...visibleMetrics, injAp: e.target.checked})}
+                  style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span>Injection Annular Pressure [bar]</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={visibleMetrics.prodWhp}
+                  onChange={(e) => setVisibleMetrics({...visibleMetrics, prodWhp: e.target.checked})}
+                  style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span>Production Wellhead Pressure [bar]</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={visibleMetrics.gt03Whp}
+                  onChange={(e) => setVisibleMetrics({...visibleMetrics, gt03Whp: e.target.checked})}
+                  style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span>GT03 Wellhead Pressure [bar]</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={visibleMetrics.injTemp}
+                  onChange={(e) => setVisibleMetrics({...visibleMetrics, injTemp: e.target.checked})}
+                  style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span>Injection Wellhead Temperature [°C]</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={visibleMetrics.prodTemp}
+                  onChange={(e) => setVisibleMetrics({...visibleMetrics, prodTemp: e.target.checked})}
+                  style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span>Production Wellhead Temperature [°C]</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={visibleMetrics.magnitude}
+                  onChange={(e) => setVisibleMetrics({...visibleMetrics, magnitude: e.target.checked})}
+                  style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span>Show seismicity</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={visibleMetrics.phases}
+                  onChange={(e) => setVisibleMetrics({...visibleMetrics, phases: e.target.checked})}
+                  style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span>Show phases</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={visibleMetrics.ptls}
+                  onChange={(e) => setVisibleMetrics({...visibleMetrics, ptls: e.target.checked})}
+                  style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span>Show ptls</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={visibleMetrics.injEnergy}
+                  onChange={(e) => setVisibleMetrics({...visibleMetrics, injEnergy: e.target.checked})}
+                  style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span>Injected Energy [MWh]</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={visibleMetrics.extractedEnergy}
+                  onChange={(e) => setVisibleMetrics({...visibleMetrics, extractedEnergy: e.target.checked})}
+                  style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span>Extracted Energy [MWh]</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={visibleMetrics.heatExchPower}
+                  onChange={(e) => setVisibleMetrics({...visibleMetrics, heatExchPower: e.target.checked})}
+                  style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span>Heat Exchanger Thermal Power [kW]</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={visibleMetrics.heatExchEnergy}
+                  onChange={(e) => setVisibleMetrics({...visibleMetrics, heatExchEnergy: e.target.checked})}
+                  style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span>Heat Exchanger Energy [MWh]</span>
+              </label>
+            </div>
           </div>
           
           <div className="chart-container">
-            <h3>Operational Metrics Over Time</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <h3>Operational Metrics Over Time</h3>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                {usingRealData && (
+                  <span style={{ 
+                    background: '#10b981', 
+                    color: 'white', 
+                    padding: '4px 12px', 
+                    borderRadius: '4px', 
+                    fontSize: '12px',
+                    fontWeight: '600'
+                  }}>
+                    📊 Real Data
+                  </span>
+                )}
+                {loading && (
+                  <span style={{ 
+                    background: '#3b82f6', 
+                    color: 'white', 
+                    padding: '4px 12px', 
+                    borderRadius: '4px', 
+                    fontSize: '12px',
+                    fontWeight: '600'
+                  }}>
+                    Loading...
+                  </span>
+                )}
+                <button
+                  onClick={() => {
+                    if (chartInstanceRef.current) {
+                      const url = chartInstanceRef.current.toBase64Image();
+                      const link = document.createElement('a');
+                      link.download = `chart-${new Date().toISOString().split('T')[0]}.png`;
+                      link.href = url;
+                      link.click();
+                    }
+                  }}
+                  style={{
+                    background: '#4c51bf',
+                    color: 'white',
+                    border: 'none',
+                    padding: '6px 12px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: '600'
+                  }}
+                  title="Screenshot"
+                >
+                  📷
+                </button>
+                <button
+                  onClick={() => {
+                    if (chartInstanceRef.current) {
+                      chartInstanceRef.current.zoom(1.2);
+                    }
+                  }}
+                  style={{
+                    background: '#4c51bf',
+                    color: 'white',
+                    border: 'none',
+                    padding: '6px 12px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: '600'
+                  }}
+                  title="Zoom In"
+                >
+                  🔍+
+                </button>
+                <button
+                  onClick={() => {
+                    if (chartInstanceRef.current) {
+                      chartInstanceRef.current.zoom(0.8);
+                    }
+                  }}
+                  style={{
+                    background: '#4c51bf',
+                    color: 'white',
+                    border: 'none',
+                    padding: '6px 12px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: '600'
+                  }}
+                  title="Zoom Out"
+                >
+                  🔍-
+                </button>
+                <button
+                  onClick={() => {
+                    if (chartInstanceRef.current && chartInstanceRef.current.resetZoom) {
+                      chartInstanceRef.current.resetZoom();
+                    }
+                  }}
+                  style={{
+                    background: '#4c51bf',
+                    color: 'white',
+                    border: 'none',
+                    padding: '6px 12px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: '600'
+                  }}
+                  title="Reset Zoom"
+                >
+                  ↻
+                </button>
+              </div>
+            </div>
             <canvas id="operationalChart"></canvas>
+            {!usingRealData && apiStatus === 'disconnected' && (
+              <div style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                textAlign: 'center',
+                color: '#718096',
+                zIndex: 10
+              }}>
+                <div style={{ fontSize: '24px', marginBottom: '10px' }}>📊</div>
+                <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '5px' }}>
+                  No Chart Data Available
+                </div>
+                <div style={{ fontSize: '12px' }}>
+                  Start the API server to view data
+                </div>
+              </div>
+            )}
+            <div style={{ 
+              marginTop: '10px', 
+              fontSize: '11px', 
+              color: '#718096', 
+              fontStyle: 'italic',
+              textAlign: 'center'
+            }}>
+              The graph shows 'cleaned up' operational metrics (e.g. flow set to zero when no production).
+            </div>
           </div>
         </div>
       );
     }
     
-    // Risk Dashboard Component
+    // ============================================================================
+    // RISK DASHBOARD COMPONENT
+    // ============================================================================
+    // Displays LSTM model predictions for 7-day seismic risk forecast
+    // Features:
+    // - Current risk level indicator (Green/Yellow/Orange/Red)
+    // - 7-day probability forecast chart
+    // - Alert probability cards (Yellow/Orange/Red)
+    // - Day-by-day risk status for next 7 days
+    // Uses real operational data to generate predictions via LSTM model
+    // ============================================================================
     function RiskDashboard() {
       const chartRef = useRef(null);
       const [chartInstance, setChartInstance] = useState(null);
+      const [apiStatus, setApiStatus] = useState('checking');
+      const [loading, setLoading] = useState(false);
+      const [usingRealData, setUsingRealData] = useState(false);
+      const [forecastData, setForecastData] = useState(null);
+      const [currentRisk, setCurrentRisk] = useState('MEDIUM');
+      const [riskProbabilities, setRiskProbabilities] = useState({ yellow: 0, orange: 0, red: 0 });
       
+      // Check API and load forecast data
       useEffect(() => {
-        const timer = setTimeout(() => {
-          const ctx = document.getElementById('riskChart');
-          if (!ctx) {
-            console.log('Risk chart canvas not found, retrying...');
-            return;
-          }
-          
-          if (chartInstance) {
-            chartInstance.destroy();
-          }
-          
-          const data = generateMockData('2023-07-01', '2025-07-31', 730);
-          const filteredLabels = data.dates.filter((_, i) => i % 30 === 0);
-          
-          const chart = new Chart(ctx, {
-            type: 'line',
-            data: {
-              labels: filteredLabels,
-              datasets: [
-                {
-                  label: 'p_7d_yellow',
-                  data: data.yellow.filter((_, i) => i % 30 === 0),
-                  borderColor: 'rgb(251, 191, 36)',
-                  backgroundColor: 'rgba(251, 191, 36, 0.1)',
-                  borderWidth: 3,
-                  tension: 0.3,
-                  fill: true
-                },
-                {
-                  label: 'p_7d_orange',
-                  data: data.orange.filter((_, i) => i % 30 === 0),
-                  borderColor: 'rgb(249, 115, 22)',
-                  backgroundColor: 'rgba(249, 115, 22, 0.1)',
-                  borderWidth: 3,
-                  tension: 0.3,
-                  fill: true
-                },
-                {
-                  label: 'p_7d_red',
-                  data: data.red.filter((_, i) => i % 30 === 0),
-                  borderColor: 'rgb(239, 68, 68)',
-                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                  borderWidth: 3,
-                  tension: 0.3,
-                  fill: true
-                }
-              ]
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              interaction: {
-                mode: 'index',
-                intersect: false,
-              },
-              plugins: {
-                legend: {
-                  display: true,
-                  position: 'top',
-                }
-              },
-              scales: {
-                x: {
-                  display: true,
-                  title: {
-                    display: true,
-                    text: 'Time'
-                  }
-                },
-                y: {
-                  display: true,
-                  title: {
-                    display: true,
-                    text: 'Probability [%]'
-                  },
-                  min: 0,
-                  max: 80
-                }
-              }
+        const loadForecast = async () => {
+          try {
+            // Check API health first
+            const health = await api.healthCheck();
+            if (health.status !== 'healthy' || !health.model_loaded) {
+              setApiStatus('disconnected');
+              console.log('⚠️ API not available - Please start the API server');
+              return;
             }
-          });
-          
-          setChartInstance(chart);
-        }, 100);
-        
-        return () => {
-          clearTimeout(timer);
-          if (chartInstance) {
-            chartInstance.destroy();
+            
+            setApiStatus('connected');
+            setLoading(true);
+            
+            // Load REAL data from API (server-side CSV loading - much faster!)
+            const now = new Date();
+            let dataToUse;
+            let isRealData = false;
+            
+            try {
+              console.log('📊 Loading real data from API...');
+              const response = await fetch(`${API_BASE_URL}/data/latest`);
+              if (response.ok) {
+                const result = await response.json();
+                if (result.data && result.data.length >= 24) {
+                  console.log(`✅ Loaded ${result.records_loaded} real records from CSV files!`);
+                  setUsingRealData(true);
+                  isRealData = true;
+                  dataToUse = result.data.slice(-24); // Last 24 hours
+                } else {
+                  throw new Error('Not enough data');
+                }
+              } else {
+                throw new Error('API returned error');
+              }
+            } catch (error) {
+              console.error('❌ Real data loading failed:', error.message);
+              setUsingRealData(false);
+              isRealData = false;
+              // No sample data - throw error to prevent forecast
+              throw new Error('Cannot generate forecast without real data. Please ensure API is running and CSV files are available.');
+            }
+            
+            // Get 7-day forecast from API using real data
+            console.log('📡 Requesting forecast from API with', dataToUse.length, 'hours of data');
+            const forecast = await api.getForecast(now.toISOString(), dataToUse);
+            console.log('📊 Received forecast response:', forecast);
+            
+            if (!forecast || forecast.length === 0) {
+              throw new Error('No forecast data received from API');
+            }
+            
+            // Format forecast data for chart
+            const dates = forecast.map(f => new Date(f.date).toISOString().split('T')[0]);
+            const yellow = forecast.map(f => {
+              const val = (f.probabilities?.yellow || 0) * 100;
+              return Math.max(0, val); // Ensure non-negative
+            });
+            const orange = forecast.map(f => {
+              const val = (f.probabilities?.orange || 0) * 100;
+              return Math.max(0, val);
+            });
+            const red = forecast.map(f => {
+              const val = (f.probabilities?.red || 0) * 100;
+              return Math.max(0, val);
+            });
+            
+            console.log('📈 Chart data - Yellow:', yellow.slice(0, 3), 'Orange:', orange.slice(0, 3), 'Red:', red.slice(0, 3));
+            console.log('📊 Full forecast probabilities:', forecast.map(f => ({
+              date: f.date,
+              probs: f.probabilities,
+              risk: f.risk_level
+            })));
+            
+            // Update KPIs with today's prediction (first forecast day)
+            if (forecast && forecast.length > 0) {
+              const today = forecast[0];
+              console.log('📊 Forecast data:', today);
+              
+              if (today.probabilities) {
+                const yellowPct = ((today.probabilities.yellow || 0) * 100).toFixed(1);
+                const orangePct = ((today.probabilities.orange || 0) * 100).toFixed(1);
+                const redPct = ((today.probabilities.red || 0) * 100).toFixed(1);
+                
+                const probs = {
+                  yellow: parseFloat(yellowPct),
+                  orange: parseFloat(orangePct),
+                  red: parseFloat(redPct)
+                };
+                
+                setRiskProbabilities(probs);
+                console.log('✅ Updated probabilities:', probs);
+                console.log('📊 Today probabilities object:', today.probabilities);
+              } else {
+                console.warn('⚠️ No probabilities in forecast data:', today);
+              }
+              
+              // Determine current risk level
+              if (today.risk_level_code !== undefined) {
+                if (today.risk_level_code === 0) {
+                  setCurrentRisk('LOW');
+                } else if (today.risk_level_code === 1) {
+                  setCurrentRisk('YELLOW');
+                } else if (today.risk_level_code === 2) {
+                  setCurrentRisk('ORANGE');
+                } else {
+                  setCurrentRisk('HIGH');
+                }
+                console.log('✅ Updated risk level:', today.risk_level_code, '→', today.risk_level);
+              } else if (today.risk_level) {
+                // Fallback: use risk_level string
+                const level = today.risk_level.toUpperCase();
+                if (level === 'GREEN') setCurrentRisk('LOW');
+                else if (level === 'YELLOW') setCurrentRisk('YELLOW');
+                else if (level === 'ORANGE') setCurrentRisk('ORANGE');
+                else if (level === 'RED') setCurrentRisk('HIGH');
+              }
+            } else {
+              console.warn('⚠️ No forecast data received');
+            }
+            
+            setForecastData(forecast);
+            setLoading(false);
+            
+            // Update chart with API data
+            const ctx = document.getElementById('riskChart');
+            if (ctx) {
+              if (chartInstance) {
+                chartInstance.destroy();
+              }
+              
+              const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                  labels: dates,
+                  datasets: [
+                    {
+                      label: 'p_7d_yellow',
+                      data: yellow,
+                      borderColor: 'rgb(251, 191, 36)',
+                      backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                      borderWidth: 3,
+                      tension: 0.3,
+                      fill: true
+                    },
+                    {
+                      label: 'p_7d_orange',
+                      data: orange,
+                      borderColor: 'rgb(249, 115, 22)',
+                      backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                      borderWidth: 3,
+                      tension: 0.3,
+                      fill: true
+                    },
+                    {
+                      label: 'p_7d_red',
+                      data: red,
+                      borderColor: 'rgb(239, 68, 68)',
+                      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                      borderWidth: 3,
+                      tension: 0.3,
+                      fill: true
+                    }
+                  ]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { display: true, position: 'top' },
+                    title: { 
+                      display: true, 
+                      text: isRealData ? '7-Day Seismic Risk Forecast - LSTM Model Predictions (Real Data)' : '7-Day Seismic Risk Forecast - LSTM Model Predictions (API Required)',
+                      font: { size: 16, weight: 'bold' }
+                    },
+                    tooltip: {
+                      callbacks: {
+                        label: function(context) {
+                          return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}%`;
+                        },
+                        footer: function(tooltipItems) {
+                          const dataIndex = tooltipItems[0].dataIndex;
+                          if (forecastData && forecastData[dataIndex]) {
+                            const day = forecastData[dataIndex];
+                            const maxProb = Math.max(
+                              day.probabilities.yellow,
+                              day.probabilities.orange,
+                              day.probabilities.red
+                            );
+                            return `Predicted Risk: ${day.risk_level} (${(maxProb * 100).toFixed(1)}% confidence)`;
+                          }
+                          return '';
+                        }
+                      }
+                    }
+                  },
+                  scales: {
+                    x: { 
+                      display: true, 
+                      title: { display: true, text: 'Date (Next 7 Days)', font: { size: 12, weight: 'bold' } },
+                      grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    y: { 
+                      display: true, 
+                      title: { display: true, text: 'Prediction Probability (%)', font: { size: 12, weight: 'bold' } }, 
+                      min: 0, 
+                      max: 100,
+                      grid: { color: 'rgba(0,0,0,0.05)' },
+                      ticks: {
+                        callback: function(value) {
+                          return value + '%';
+                        }
+                      }
+                    }
+                  }
+                }
+              });
+              
+              setChartInstance(chart);
+            }
+          } catch (error) {
+            console.error('Failed to load forecast from API:', error);
+            setApiStatus('disconnected');
+            setLoading(false);
+            // No mock data - only real data
           }
         };
+        
+        loadForecast();
       }, []);
+      
       
       return (
         <div>
           <h2>Seismic Risk & Prediction</h2>
           
           <div className="kpis">
-            <KPICard title="Current Risk" value="MEDIUM" color="#f59e0b" />
-            <KPICard title="Yellow Probability" value="45%" color="#fbbf24" />
-            <KPICard title="Orange Probability" value="28%" color="#f97316" />
-            <KPICard title="Red Probability" value="12%" color="#ef4444" />
+            <KPICard 
+              title="Current Risk (LSTM)" 
+              value={currentRisk} 
+              color={
+                currentRisk === 'LOW' ? '#10b981' :
+                currentRisk === 'YELLOW' ? '#fbbf24' :
+                currentRisk === 'ORANGE' ? '#f97316' : '#ef4444'
+              } 
+            />
+            <KPICard 
+              title="Yellow Alert (7d)" 
+              value={`${riskProbabilities.yellow.toFixed(1)}%`} 
+              color="#fbbf24" 
+            />
+            <KPICard 
+              title="Orange Alert (7d)" 
+              value={`${riskProbabilities.orange.toFixed(1)}%`} 
+              color="#f97316" 
+            />
+            <KPICard 
+              title="Red Alert (7d)" 
+              value={`${riskProbabilities.red.toFixed(1)}%`} 
+              color="#ef4444" 
+            />
           </div>
+          
+          {apiStatus === 'connected' && (
+            <div style={{ 
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+              color: 'white', 
+              padding: '15px 20px', 
+              borderRadius: '8px', 
+              marginBottom: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+            }}>
+              <div>
+                <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '4px' }}>
+                  🤖 LSTM Model Active
+                </div>
+                <div style={{ fontSize: '18px', fontWeight: '600' }}>
+                  {usingRealData ? 'Using Real Operational Data' : 'API Not Connected - Start API Server'} → Predicting 7-Day Seismic Risk
+                </div>
+              </div>
+              <div style={{ 
+                background: 'rgba(255,255,255,0.2)', 
+                padding: '8px 16px', 
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: '600'
+              }}>
+                Model: lstm_model_ammad.h5
+              </div>
+            </div>
+          )}
           
           <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
             <div className="chart-container" style={{ flex: 2 }}>
-              <h3>7-Day Probability Forecast</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <h3>7-Day Probability Forecast</h3>
+                {apiStatus === 'connected' && (
+                  <span style={{ 
+                    background: '#10b981', 
+                    color: 'white', 
+                    padding: '4px 12px', 
+                    borderRadius: '4px', 
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    marginRight: '8px'
+                  }}>
+                    ✓ API Connected
+                  </span>
+                )}
+                {usingRealData && (
+                  <span style={{ 
+                    background: '#3b82f6', 
+                    color: 'white', 
+                    padding: '4px 12px', 
+                    borderRadius: '4px', 
+                    fontSize: '12px',
+                    fontWeight: '600'
+                  }}>
+                    📊 Real Data
+                  </span>
+                )}
+                {apiStatus === 'disconnected' && (
+                  <span style={{ 
+                    background: '#ef4444', 
+                    color: 'white', 
+                    padding: '4px 12px', 
+                    borderRadius: '4px', 
+                    fontSize: '12px',
+                    fontWeight: '600'
+                  }}>
+                    ⚠ API Not Connected
+                  </span>
+                )}
+                {loading && (
+                  <span style={{ 
+                    background: '#3b82f6', 
+                    color: 'white', 
+                    padding: '4px 12px', 
+                    borderRadius: '4px', 
+                    fontSize: '12px',
+                    fontWeight: '600'
+                  }}>
+                    Loading...
+                  </span>
+                )}
+              </div>
               <canvas id="riskChart"></canvas>
             </div>
             
             <div className="chart-container" style={{ flex: 1 }}>
-              <h3>Risk Indicator</h3>
-              <div className="risk-indicator risk-medium">⚠️</div>
-              <div style={{ textAlign: 'center', color: '#f59e0b', fontWeight: 600 }}>
-                MEDIUM RISK
+              <h3>Risk Indicator (LSTM Prediction)</h3>
+              <div 
+                className={`risk-indicator ${
+                  currentRisk === 'LOW' ? 'risk-low' :
+                  currentRisk === 'YELLOW' ? 'risk-medium' :
+                  currentRisk === 'ORANGE' ? 'risk-high' : 'risk-critical'
+                }`}
+                style={{
+                  fontSize: '80px',
+                  width: '150px',
+                  height: '150px',
+                  margin: '20px auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '50%',
+                  background: 
+                    currentRisk === 'LOW' ? 'linear-gradient(135deg, #10b981, #059669)' :
+                    currentRisk === 'YELLOW' ? 'linear-gradient(135deg, #fbbf24, #f59e0b)' :
+                    currentRisk === 'ORANGE' ? 'linear-gradient(135deg, #f97316, #ea580c)' :
+                    'linear-gradient(135deg, #ef4444, #dc2626)',
+                  boxShadow: `0 8px 16px ${
+                    currentRisk === 'LOW' ? 'rgba(16, 185, 129, 0.3)' :
+                    currentRisk === 'YELLOW' ? 'rgba(251, 191, 36, 0.3)' :
+                    currentRisk === 'ORANGE' ? 'rgba(249, 115, 22, 0.3)' :
+                    'rgba(239, 68, 68, 0.3)'
+                  }`
+                }}
+              >
+                {currentRisk === 'LOW' ? '✓' : currentRisk === 'YELLOW' ? '⚠' : currentRisk === 'ORANGE' ? '⚡' : '🚨'}
               </div>
-              <div style={{ marginTop: '20px', fontSize: '12px', color: '#8fa3c8', textAlign: 'center' }}>
-                Monitor injection rates closely
+              <div style={{ 
+                textAlign: 'center', 
+                color: currentRisk === 'LOW' ? '#10b981' : currentRisk === 'YELLOW' ? '#f59e0b' : currentRisk === 'ORANGE' ? '#f97316' : '#ef4444', 
+                fontWeight: 700,
+                fontSize: '20px',
+                marginTop: '10px'
+              }}>
+                {currentRisk} RISK
               </div>
+              <div style={{ marginTop: '20px', fontSize: '13px', color: '#64748b', textAlign: 'center', lineHeight: '1.6' }}>
+                {currentRisk === 'LOW' && '✅ Normal operations - Continue monitoring'}
+                {currentRisk === 'YELLOW' && '⚠️ Elevated risk - Monitor injection rates closely'}
+                {currentRisk === 'ORANGE' && '⚡ High risk - Consider reducing injection rates'}
+                {currentRisk === 'HIGH' && '🚨 Critical risk - Immediate action required'}
+              </div>
+              
+              {forecastData && forecastData.length > 0 && (
+                <div style={{ 
+                  marginTop: '25px', 
+                  padding: '15px', 
+                  background: '#f8fafc', 
+                  borderRadius: '8px',
+                  border: '1px solid #e2e8f0'
+                }}>
+                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '10px', fontWeight: '600' }}>
+                    NEXT 7 DAYS FORECAST
+                  </div>
+                  {forecastData.slice(0, 7).map((day, idx) => (
+                    <div key={idx} style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      padding: '8px 0',
+                      borderBottom: idx < 6 ? '1px solid #e2e8f0' : 'none'
+                    }}>
+                      <div style={{ fontSize: '12px', color: '#475569' }}>
+                        Day {idx + 1}: {new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </div>
+                      <div style={{ 
+                        fontSize: '11px', 
+                        padding: '4px 8px', 
+                        borderRadius: '4px',
+                        background: day.risk_level_code === 0 ? '#d1fae5' : 
+                                   day.risk_level_code === 1 ? '#fef3c7' :
+                                   day.risk_level_code === 2 ? '#fed7aa' : '#fee2e2',
+                        color: day.risk_level_code === 0 ? '#065f46' :
+                               day.risk_level_code === 1 ? '#92400e' :
+                               day.risk_level_code === 2 ? '#9a3412' : '#991b1b',
+                        fontWeight: '600'
+                      }}>
+                        {day.risk_level}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -566,9 +1895,80 @@
       );
     }
     
-    // Render the app
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    // Render the app with error handling
+    window.addEventListener('error', function(e) {
+      console.error('Global error:', e.error);
+      const rootEl = document.getElementById('root');
+      if (rootEl && !rootEl.innerHTML.includes('Error')) {
+        rootEl.innerHTML = `
+          <div style="padding: 20px; font-family: Arial; background: #fee; border: 2px solid #fcc; margin: 20px;">
+            <h2>⚠️ JavaScript Error Detected</h2>
+            <p><strong>Error:</strong> ${e.error ? e.error.message : 'Unknown error'}</p>
+            <p><strong>File:</strong> ${e.filename || 'Unknown'}</p>
+            <p><strong>Line:</strong> ${e.lineno || 'Unknown'}</p>
+            <p>Check browser console (F12) for more details.</p>
+          </div>
+        `;
+      }
+    });
+    
+    // Wait for DOM and React to be ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', renderApp);
+    } else {
+      renderApp();
+    }
+    
+    function renderApp() {
+      try {
+        const rootEl = document.getElementById('root');
+        if (!rootEl) {
+          console.error('Root element not found!');
+          return;
+        }
+        
+        // Check if React is loaded
+        if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+          rootEl.innerHTML = `
+            <div style="padding: 20px; font-family: Arial; background: #fee; border: 2px solid #fcc;">
+              <h2>⚠️ React Not Loaded</h2>
+              <p>React libraries failed to load. Check your internet connection.</p>
+              <p>CDN URLs:</p>
+              <ul>
+                <li>React: https://unpkg.com/react@18/umd/react.production.min.js</li>
+                <li>ReactDOM: https://unpkg.com/react-dom@18/umd/react-dom.production.min.js</li>
+              </ul>
+            </div>
+          `;
+          return;
+        }
+        
+        // Use React 18 createRoot if available, otherwise fallback to render
+        if (ReactDOM.createRoot) {
+          const root = ReactDOM.createRoot(rootEl);
+          root.render(<App />);
+        } else {
+          // Fallback for older React versions
+          ReactDOM.render(<App />, rootEl);
+        }
+        
+        console.log('✅ Dashboard rendered successfully!');
+      } catch (error) {
+        console.error('Error rendering app:', error);
+        const rootEl = document.getElementById('root');
+        if (rootEl) {
+          rootEl.innerHTML = `
+            <div style="padding: 20px; font-family: Arial; background: #fee; border: 2px solid #fcc;">
+              <h2>❌ Error Loading Dashboard</h2>
+              <p><strong>Error:</strong> ${error.message}</p>
+              <p><strong>Stack:</strong></p>
+              <pre style="background: #fff; padding: 10px; overflow: auto;">${error.stack || 'No stack trace'}</pre>
+              <p><strong>Solution:</strong> Open browser console (F12) and check for errors.</p>
+            </div>
+          `;
+        }
+      }
+    }
   </script>
 </body>
 </html>
