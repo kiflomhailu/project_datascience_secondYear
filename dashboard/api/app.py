@@ -927,10 +927,14 @@ if __name__ == '__main__':
         print("  POST /predict - Single prediction")
         print("  POST /predict/batch - Batch predictions")
         print("  POST /predict/forecast - 7-day forecast")
-        print("\nServer running on http://localhost:5000")
+        # For cloud deployment (Render, Railway, etc.) - use dynamic port
+        port = int(os.environ.get('PORT', 5000))
+        
+        print(f"\nServer running on http://0.0.0.0:{port}")
         print("=" * 60)
         
-        app.run(host='0.0.0.0', port=5000, debug=True)
+        # Use debug=False for production (cloud deployment)
+        app.run(host='0.0.0.0', port=port, debug=False)
     except Exception as e:
         print(f"\n[ERROR] Error starting server: {e}")
         print("Please check that the model file exists and is accessible.")
