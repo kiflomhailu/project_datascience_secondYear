@@ -78,6 +78,18 @@ models/*.jpg
 # Scripts with special characters
 scripts/✅*
 
+# Extra documentation files (keep only README.md)
+PROJECT_STRUCTURE.md
+QUICK_REFERENCE.md
+SETUP.md
+api/README.md
+scripts/README_TRAINING.md
+
+# Extra training scripts (keep only main one)
+scripts/train_lightweight.py
+scripts/train_simple.py
+scripts/test_model.py
+
 # Temporary files
 *.tmp
 *.log
