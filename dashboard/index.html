@@ -247,7 +247,7 @@
     const { useState, useEffect, useRef } = React;
     
     // API Client
-    const API_BASE_URL = 'https://project-datascience-secondyear.onrender.com';
+    const API_BASE_URL = 'http://localhost:5000';
     
     // ============================================================================
     // API CLIENT CLASS
@@ -883,14 +883,61 @@
                 });
                 
                 chartInstanceRef.current = chart;
+              } else {
+                console.warn('⚠️ Chart canvas not found');
               }
             } else {
-              throw new Error('No data received');
+              // No data - create empty chart with message
+              console.warn('⚠️ No operational data received - creating empty chart');
+              const ctx = document.getElementById('operationalChart');
+              if (ctx && !chartInstanceRef.current) {
+                const chart = new Chart(ctx, {
+                  type: 'line',
+                  data: {
+                    labels: [],
+                    datasets: []
+                  },
+                  options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: { display: false },
+                      title: {
+                        display: true,
+                        text: 'No data available for selected date range'
+                      }
+                    }
+                  }
+                });
+                chartInstanceRef.current = chart;
+              }
             }
           } catch (error) {
             console.error('❌ Real data loading failed:', error.message);
             setUsingRealData(false);
-            // Show error but don't use mock data
+            // Create empty chart on error
+            const ctx = document.getElementById('operationalChart');
+            if (ctx && !chartInstanceRef.current) {
+              const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                  labels: [],
+                  datasets: []
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { display: false },
+                    title: {
+                      display: true,
+                      text: 'Error loading data: ' + error.message
+                    }
+                  }
+                }
+              });
+              chartInstanceRef.current = chart;
+            }
           } finally {
             setLoading(false);
           }
