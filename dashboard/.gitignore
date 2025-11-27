@@ -68,6 +68,16 @@ image/
 api/API_GUIDE.md
 api/API_SIMPLE.md
 
+# Duplicate folder structure
+project_datascience_secondYear/
+
+# Training history images
+models/*.png
+models/*.jpg
+
+# Scripts with special characters
+scripts/✅*
+
 # Temporary files
 *.tmp
 *.log
