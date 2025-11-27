@@ -1,2 +1,0 @@
-git commit -m "Add large CSV file using Git LFS"
-git push origin main
