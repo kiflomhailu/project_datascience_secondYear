@@ -531,7 +531,13 @@ def get_operational_data():
                     continue
         
         if operational_df is None or len(operational_df) == 0:
-            return jsonify({'error': 'No operational data found'}), 404
+            # Return empty data instead of 404 (allows dashboard to work without CSV files)
+            return jsonify({
+                'data': [],
+                'count': 0,
+                'source': 'real_csv',
+                'message': 'No operational data available (CSV files not found)'
+            }), 200
         
         # Convert to JSON format
         result = []
@@ -702,7 +708,12 @@ def get_latest_data():
                     continue
         
         if operational_df is None or len(operational_df) == 0:
-            return jsonify({'error': 'No operational data found'}), 404
+            # Return empty data instead of 404 (allows dashboard to work without CSV files)
+            return jsonify({
+                'operational': [],
+                'seismic': [],
+                'message': 'No data available (CSV files not found)'
+            }), 200
         
         # Get last 24 records
         recent_ops = operational_df.tail(24).copy()
