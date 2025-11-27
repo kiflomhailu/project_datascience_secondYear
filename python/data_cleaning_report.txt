@@ -1,0 +1,42 @@
+DATA CLEANING REPORT
+==================================================
+Generated on: 2025-10-12 19:53:42
+
+SEISMIC EVENTS DATASET
+------------------------------
+Original shape: (378, 15)
+Cleaned shape: (378, 19)
+Missing values: 0
+Duplicate rows removed: 0
+Columns with outliers: 7
+
+OPERATIONAL METRICS DATASET
+------------------------------
+Original shape: (695625, 25)
+Cleaned shape: (695625, 26)
+Missing values: 18
+Duplicate rows removed: 0
+Columns with outliers: 13
+
+DETAILED FINDINGS
+--------------------
+
+Operational Dataset Missing Values:
+  inj_flow: 347
+  inj_whp: 6092
+  inj_temp: 6133
+  inj_ap: 12926
+  prod_temp: 6131
+  prod_whp: 6087
+  gt03_whp: 282
+  hedh_thpwr: 41131
+  basin_flow: 11966
+  prod_flow: 12281
+  volume: 347
+  cum_volume: 347
+  inj_energy: 6103
+  cum_inj_energy: 6103
+  cooling_energy: 6144
+  cum_cooling_energy: 6144
+  heat_exch_energy: 41131
+  cum_heat_exch_energy: 41131

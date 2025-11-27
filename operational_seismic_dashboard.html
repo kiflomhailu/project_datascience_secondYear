@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Operational & Seismic Activity Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      background: #f5f7fa;
+      color: #1a202c;
+    }
+    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+    
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    .logo { font-size: 24px; font-weight: 700; color: #4c51bf; }
+    .subtitle { color: #718096; font-size: 14px; }
+    
+    .date-selector {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .date-input {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .date-input label { font-size: 12px; font-weight: 600; color: #718096; }
+    .date-input input {
+      padding: 10px;
+      border: 1px solid #cbd5e0;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .kpi-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border: 1px solid #e2e8f0;
+    }
+    .kpi-card h4 {
+      font-size: 12px;
+      font-weight: 600;
+      color: #718096;
+      margin: 0 0 10px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .kpi-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: #2d3748;
+      margin: 0;
+    }
+    
+    .controls-section {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .controls-section h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin: 0 0 15px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #2d3748;
+    }
+    .checkboxes {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .checkbox {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .checkbox input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+    .checkbox label {
+      font-size: 14px;
+      color: #4a5568;
+      cursor: pointer;
+    }
+    
+    .chart-container {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      position: relative;
+    }
+    .chart-toolbar {
+      position: absolute;
+      top: 30px;
+      right: 30px;
+      display: flex;
+      gap: 10px;
+      z-index: 10;
+    }
+    .toolbar-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e0;
+      background: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: #4a5568;
+    }
+    .toolbar-btn:hover {
+      background: #f7fafc;
+      border-color: #a0aec0;
+    }
+    
+    #mainChart {
+      height: 500px;
+    }
+    
+    @media (max-width: 1200px) {
+      .date-selector { grid-template-columns: repeat(2, 1fr); }
+      .kpis { grid-template-columns: repeat(2, 1fr); }
+      .checkboxes { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <div class="logo">Geothermal Plant Monitoring</div>
+        <div class="subtitle">Operational & Seismic Activity Dashboard</div>
+      </div>
+    </header>
+
+    <!-- Date/Time Selector -->
+    <div class="date-selector">
+      <div class="date-input">
+        <label>Start Date</label>
+        <input type="date" id="startDate" value="2018-12-01">
+      </div>
+      <div class="date-input">
+        <label>Start Time</label>
+        <input type="time" id="startTime" value="00:01">
+      </div>
+      <div class="date-input">
+        <label>End Date</label>
+        <input type="date" id="endDate" value="2025-09-22">
+      </div>
+      <div class="date-input">
+        <label>End Time</label>
+        <input type="time" id="endTime" value="23:59">
+      </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpis">
+      <div class="kpi-card">
+        <h4>Number of Seismic Events</h4>
+        <p class="kpi-value">358</p>
+      </div>
+      <div class="kpi-card">
+        <h4>Max Magnitude</h4>
+        <p class="kpi-value">2.1</p>
+      </div>
+      <div class="kpi-card">
+        <h4>Average Flow Rate (m³/h)</h4>
+        <p class="kpi-value">7.35</p>
+      </div>
+      <div class="kpi-card">
+        <h4>Avg Injection Pressure (bar)</h4>
+        <p class="kpi-value">24.3</p>
+      </div>
+    </div>
+
+    <!-- Checkboxes -->
+    <div class="controls-section">
+      <h3>Data Selection</h3>
+      <div class="checkboxes">
+        <div class="checkbox-group">
+          <div class="checkbox">
+            <input type="checkbox" id="inj_flow" checked>
+            <label for="inj_flow">Total injection flow rate [m³/h]</label>
+          </div>
+          <div class="checkbox">
+            <input type="checkbox" id="inj_ap">
+            <label for="inj_ap">Injection Annular Pressure [bar]</label>
+          </div>
+          <div class="checkbox">
+            <input type="checkbox" id="inj_energy">
+            <label for="inj_energy">Injected Energy [MWh]</label>
+          </div>
+          <div class="checkbox">
+            <input type="checkbox" id="show_phases" checked>
+            <label for="show_phases">Show phases</label>
+          </div>
+        </div>
+
+        <div class="checkbox-group">
+          <div class="checkbox">
+            <input type="checkbox" id="basin_flow">
+            <label for="basin_flow">Basin injection flow rate [m³/h]</label>
+          </div>
+          <div class="checkbox">
+            <input type="checkbox" id="prod_temp">
+            <label for="prod_temp">Production Wellhead Temperature [°C]</label>
+          </div>
+          <div class="checkbox">
+            <input type="checkbox" id="extracted_energy">
+            <label for="extracted_energy">Extracted Energy [MWh]</label>
+          </div>
+          <div class="checkbox">
+            <input type="checkbox" id="show_seismicity" checked>
+            <label for="show_seismicity">Show seismicity</label>
+          </div>
+        </div>
+
+        <div class="checkbox-group">
+          <div class="checkbox">
+            <input type="checkbox" id="inj_whp" checked>
+            <label for="inj_whp">Injection Wellhead Pressure [bar]</label>
+          </div>
+          <div class="checkbox">
+            <input type="checkbox" id="prod_whp">
+            <label for="prod_whp">Production Wellhead Pressure [bar]</label>
+          </div>
+          <div class="checkbox">
+            <input type="checkbox" id="heat_exch_power">
+            <label for="heat_exch_power">Heat Exchanger Thermal Power [kW]</label>
+          </div>
+          <div class="checkbox">
+            <input type="checkbox" id="show_ptls" checked>
+            <label for="show_ptls">Show ptls</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Chart -->
+    <div class="chart-container">
+      <div class="chart-toolbar">
+        <button class="toolbar-btn" title="Download">📷</button>
+        <button class="toolbar-btn" title="Zoom">🔍</button>
+        <button class="toolbar-btn" title="Pan">✋</button>
+        <button class="toolbar-btn" title="Reset">↺</button>
+        <button class="toolbar-btn" title="Fullscreen">⛶</button>
+      </div>
+      <canvas id="mainChart"></canvas>
+    </div>
+
+    <p style="text-align: center; color: #718096; font-size: 12px; margin-top: 20px;">
+      • The graph shows 'cleaned up' operational metrics (e.g. flow set to zero when no production).
+    </p>
+  </div>
+
+  <script>
+    // Mock data for demonstration
+    const mockDates = [];
+    const mockInjFlow = [];
+    const mockInjWhp = [];
+    const mockMagnitude = [];
+    
+    const startDate = new Date('2018-12-01');
+    const endDate = new Date('2025-09-22');
+    const numPoints = 500;
+    
+    for (let i = 0; i < numPoints; i++) {
+      const date = new Date(startDate.getTime() + (i / numPoints) * (endDate - startDate));
+      mockDates.push(date.toISOString().split('T')[0]);
+      mockInjFlow.push(Math.random() * 1.2 + 0.3);
+      mockInjWhp.push(Math.random() * 1.5 + 0.4);
+      mockMagnitude.push(Math.random() * 3 - 1);
+    }
+
+    const ctx = document.getElementById('mainChart').getContext('2d');
+    
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: mockDates.filter((_, i) => i % 50 === 0),
+        datasets: [
+          {
+            label: 'inj_flow*',
+            data: mockInjFlow.filter((_, i) => i % 50 === 0),
+            borderColor: 'rgb(59, 130, 246)',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            borderWidth: 2,
+            tension: 0.1,
+            yAxisID: 'y'
+          },
+          {
+            label: 'inj_whp*',
+            data: mockInjWhp.filter((_, i) => i % 50 === 0),
+            borderColor: 'rgb(16, 185, 129)',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            borderWidth: 2,
+            tension: 0.1,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Luckett Magnitude',
+            data: mockMagnitude.filter((_, i) => i % 50 === 0),
+            borderColor: 'rgb(34, 197, 94)',
+            backgroundColor: 'rgba(34, 197, 94, 0.2)',
+            borderWidth: 2,
+            pointRadius: 3,
+            yAxisID: 'y'
+          },
+          {
+            label: 'p_7d_yellow',
+            data: Array.from({length: mockDates.filter((_, i) => i % 50 === 0).length}, () => Math.random() * 20),
+            borderColor: 'rgb(234, 179, 8)',
+            backgroundColor: 'rgba(234, 179, 8, 0.1)',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            yAxisID: 'y1'
+          },
+          {
+            label: 'p_7d_orange',
+            data: Array.from({length: mockDates.filter((_, i) => i % 50 === 0).length}, () => Math.random() * 40),
+            borderColor: 'rgb(249, 115, 22)',
+            backgroundColor: 'rgba(249, 115, 22, 0.1)',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            yAxisID: 'y1'
+          },
+          {
+            label: 'p_7d_red',
+            data: Array.from({length: mockDates.filter((_, i) => i % 50 === 0).length}, () => Math.random() * 20),
+            borderColor: 'rgb(239, 68, 68)',
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+          },
+          tooltip: {
+            enabled: true
+          }
+        },
+        scales: {
+          x: {
+            display: true,
+            title: {
+              display: true,
+              text: 'Time [UTC]'
+            }
+          },
+          y: {
+            type: 'linear',
+            display: true,
+            position: 'left',
+            title: {
+              display: true,
+              text: 'Luckett Magnitude'
+            }
+          },
+          y1: {
+            type: 'linear',
+            display: true,
+            position: 'right',
+            title: {
+              display: true,
+              text: 'pTLS Probability [%]'
+            },
+            grid: {
+              drawOnChartArea: false
+            }
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
+

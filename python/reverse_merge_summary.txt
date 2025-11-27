@@ -1,0 +1,175 @@
+================================================================================
+REVERSE MERGE SUMMARY: Operational Data with Seismic Events
+================================================================================
+
+WHAT IS REVERSE MERGE?
+----------------------
+Instead of keeping seismic events and adding operational data to them,
+we keep ALL operational records and flag which ones had earthquakes.
+
+APPROACH:
+---------
+  Starting point: 695,625 operational records (every 5 minutes)
+  Add to them:    378 seismic events (when they occurred)
+  Result:         695,625 rows with earthquake flags
+
+MERGE STRATEGY:
+---------------
+  - Base dataset: operational_metrics.csv (all records preserved)
+  - Add from: seismic_events.csv (matched by timestamp)
+  - Tolerance: Within 5 minutes
+  - Direction: Find nearest earthquake to each operational record
+
+KEY RESULTS:
+------------
+  Total operational records:         695,625
+  Records WITH earthquake nearby:        681  (0.098%)
+  Records WITHOUT earthquake:        694,944  (99.902%)
+  
+  Interpretation: Only 0.1% of operational time had earthquakes!
+
+NEW COLUMNS ADDED:
+------------------
+  - occurred_at: When earthquake happened (if any)
+  - event_id: Earthquake identifier
+  - magnitude: Earthquake magnitude (-1.0 to 2.1)
+  - pgv_max: Peak ground velocity
+  - location: 3D coordinates of earthquake
+  - has_earthquake: TRUE/FALSE flag (easy filtering)
+  - earthquake_magnitude: Same as magnitude (for clarity)
+
+FILES CREATED:
+--------------
+1. operational_during_earthquakes.csv
+   - Size: 681 rows
+   - Contains: Only operational records when earthquakes occurred
+   - Use: Focus analysis on seismic events
+
+2. daily_operations_with_earthquake_count.csv
+   - Size: 2,448 days
+   - Contains: Daily aggregated data with:
+     * earthquake_count: Number of earthquakes that day
+     * avg_inj_flow: Average injection flow
+     * avg_inj_whp: Average injection wellhead pressure
+     * avg_prod_flow: Average production flow
+     * avg_prod_temp: Average production temperature
+   - Use: Best for trend analysis and visualization
+
+3. operational_with_earthquakes_full.csv (optional, not saved)
+   - Size: 695,625 rows
+   - Contains: Complete operational dataset with earthquake flags
+   - File size: ~200-300 MB
+   - Use: Full time series analysis
+
+WHEN TO USE REVERSE MERGE:
+---------------------------
+✓ Operational safety monitoring
+  - Identify high-risk periods
+  - Flag when operations coincided with earthquakes
+
+✓ Time series analysis
+  - Complete operational timeline preserved
+  - See periods between earthquakes
+
+✓ Predictive modeling
+  - Binary classification: Will operation cause earthquake?
+  - Training data: operations with/without earthquakes
+
+✓ Dashboard and visualization
+  - Plot full operational history
+  - Highlight earthquake moments as events
+
+✓ Statistical analysis
+  - Compare operational parameters on earthquake days vs normal days
+  - Test if certain operations correlate with seismicity
+
+COMPARISON WITH FORWARD MERGE:
+-------------------------------
+Forward Merge (Seismic -> Operational):
+  - 378 rows (one per earthquake)
+  - Question: "What were plant conditions during each earthquake?"
+  - Use: Study earthquake characteristics
+
+Reverse Merge (Operational -> Seismic):
+  - 695,625 rows (one per operational record)
+  - Question: "Did any earthquake occur during this operation?"
+  - Use: Monitor operational safety
+
+EXAMPLE USE CASES:
+------------------
+1. Safety Alert System
+   "Alert operators when current conditions match those during past 
+    earthquakes" - Need full operational history with earthquake flags
+
+2. Risk Assessment
+   "What percentage of high-pressure injections resulted in earthquakes?"
+   - Need all injection records, flagged for earthquakes
+
+3. Daily Reporting
+   "How many earthquakes occurred today and what were average conditions?"
+   - Use daily_operations_with_earthquake_count.csv
+
+4. Pattern Detection
+   "Are there time periods or seasonal patterns when earthquakes cluster?"
+   - Need daily or monthly aggregations
+
+RECOMMENDED FILE FOR MOST ANALYSES:
+------------------------------------
+Use: daily_operations_with_earthquake_count.csv
+
+Advantages:
+  ✓ Manageable size (2,448 rows vs 695,625)
+  ✓ Contains earthquake counts per day
+  ✓ Contains average operational metrics
+  ✓ Easy to visualize and analyze
+  ✓ Perfect for trend analysis
+  ✓ Good balance between detail and size
+
+TECHNICAL DETAILS:
+------------------
+Python code used:
+  pd.merge_asof(
+      left=operational_data,           # Keep all operational records
+      right=seismic_events,            # Add seismic data where matches
+      left_on="recorded_at",
+      right_on="occurred_at",
+      direction="nearest",
+      tolerance=pd.Timedelta(minutes=5)
+  )
+
+Time matching:
+  - Average time gap: 0.6 seconds (very precise!)
+  - Maximum time gap: 300 seconds (5 minutes tolerance)
+  - 681 successful matches out of 695,625 records
+
+WHY 681 MATCHES FOR 378 EARTHQUAKES?
+-------------------------------------
+Because multiple operational records (every 5 minutes) can be within
+5 minutes of the same earthquake.
+
+Example:
+  Earthquake at 10:03:25
+  Matches with:
+    - 10:00:00 (operational record)
+    - 10:05:00 (operational record)
+  = 2 operational records for 1 earthquake
+
+This is EXPECTED and CORRECT behavior!
+
+CONCLUSION:
+-----------
+The reverse merge provides a complete operational timeline with earthquake
+annotations. It's ideal for:
+  - Monitoring operations for safety
+  - Predicting earthquake risk based on operations
+  - Understanding normal vs seismic operational patterns
+  - Time series modeling and forecasting
+
+Use daily_operations_with_earthquake_count.csv for most practical analyses!
+
+================================================================================
+Generated: October 2025
+Data period: November 2018 - September 2025 (6.8 years)
+================================================================================
+
+

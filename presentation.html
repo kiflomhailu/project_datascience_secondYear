@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Project Presentation • Geothermal & Seismic Dashboards</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0b1220;--panel:#111827;--text:#e6edf7;--muted:#9fb3d9;--accent:#4f8cff;--ok:#10b981;--warn:#f59e0b;--bad:#ef4444;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#0b1220 0%,#0d1426 100%);color:var(--text)}
+    .deck{height:100%;display:flex;flex-direction:column}
+    header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.08);backdrop-filter:blur(6px);position:sticky;top:0;z-index:5}
+    .brand{display:flex;align-items:center;gap:10px}
+    .logo{width:32px;height:32px;border-radius:8px;background:radial-gradient(120% 120% at 0% 0%,#62a0ff 0%,#4f8cff 40%,#7e5eff 100%);box-shadow:0 10px 30px rgba(79,140,255,.35)}
+    .title{font-size:16px;font-weight:700}
+    .muted{color:var(--muted);font-size:12px}
+    .toolbar{display:flex;gap:8px}
+    .btn{background:transparent;border:1px solid #2a3a60;color:#cfe0ff;padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:600}
+    .btn.primary{background:linear-gradient(180deg,#4f8cff 0%,#3b82f6 100%);border:0;color:#fff;box-shadow:0 6px 18px rgba(59,130,246,.35)}
+    .progress{height:4px;background:#1f2a44}
+    .bar{height:100%;width:0;background:linear-gradient(90deg,#4f8cff,#7e5eff)}
+
+    .slides{flex:1;position:relative;overflow:hidden}
+    .slide{position:absolute;inset:0;padding:46px 22px;display:flex;align-items:center;justify-content:center;opacity:0;transform:translateX(40px);transition:opacity .35s ease,transform .35s ease}
+    .slide.active{opacity:1;transform:none}
+
+    .content{max-width:1000px;background:rgba(17,24,39,.7);border:1px solid #233352;border-radius:16px;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+    h1{margin:0 0 10px;font-size:28px}
+    h2{margin:0 0 16px;font-size:22px}
+    p{margin:8px 0 0;line-height:1.6}
+    ul{margin:10px 0 0 18px;line-height:1.8}
+    .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:12px}
+    .kpi{background:#0e1628;border:1px solid #263a5d;border-radius:12px;padding:14px}
+    .kpi h4{margin:0 0 8px;color:var(--muted);font-size:12px}
+    .metric{font-size:22px;font-weight:700}
+
+    .nav{position:fixed;bottom:16px;left:0;right:0;display:flex;justify-content:center;gap:10px;pointer-events:none}
+    .dot{width:10px;height:10px;border-radius:50%;border:1px solid #4062a7;pointer-events:auto}
+    .dot.active{background:#4f8cff;border-color:#4f8cff}
+
+    .links{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+    .link{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;border:1px solid #2a3a60;text-decoration:none;color:#cfe0ff}
+    .link.primary{background:linear-gradient(180deg,#4f8cff 0%,#3b82f6 100%);border:0;color:#fff}
+
+    @media (max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+    /* Print to PDF */
+    @media print{
+      body{background:white;color:black}
+      header,.nav,.progress{display:none}
+      .slide{position:relative;opacity:1;transform:none;page-break-after:always}
+      .content{background:white;border:0;box-shadow:none;color:black}
+      .link,.btn{border:1px solid #ccc;color:black}
+    }
+  </style>
+</head>
+<body>
+  <div class="deck">
+    <header>
+      <div class="brand">
+        <div class="logo"></div>
+        <div>
+          <div class="title">Geothermal & Seismic Dashboards</div>
+          <div class="muted">Presentation (Frontend-only)</div>
+        </div>
+      </div>
+      <div class="toolbar">
+        <button class="btn" id="prevBtn">◀ Prev</button>
+        <button class="btn" id="nextBtn">Next ▶</button>
+        <button class="btn primary" id="fullBtn">Fullscreen</button>
+      </div>
+    </header>
+    <div class="progress"><div class="bar" id="bar"></div></div>
+
+    <main class="slides" id="slides">
+      <!-- Slide 1 -->
+      <section class="slide active">
+        <div class="content">
+          <h1>What we built</h1>
+          <p>Two web dashboards to understand how plant operations relate to small earthquakes. Everything runs in the browser (HTML/CSS/JS only).</p>
+          <div class="links">
+            <a class="link primary" href="./operational_seismic_dashboard.html" target="_blank">Open Operational Dashboard ↗</a>
+            <a class="link" href="./seismic_risk_dashboard.html" target="_blank">Open Risk Dashboard ↗</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Slide 2 -->
+      <section class="slide">
+        <div class="content">
+          <h2>Goal (in simple words)</h2>
+          <ul>
+            <li>See plant activity over time (flows, pressures, temperature, energy).</li>
+            <li>See when earthquakes happened and how strong they were.</li>
+            <li>Compare both to spot patterns and reduce risk.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Slide 3 -->
+      <section class="slide">
+        <div class="content">
+          <h2>The two datasets</h2>
+          <ul>
+            <li><strong>Seismic events</strong>: date/time, magnitude, location, phase → ~380 events.</li>
+            <li><strong>Operational metrics</strong>: frequent readings (flows, pressures, temperature, energy, phase) → large time series.</li>
+          </ul>
+          <p class="muted">We align them by time to compare operations vs earthquakes.</p>
+        </div>
+      </section>
+
+      <!-- Slide 4 -->
+      <section class="slide">
+        <div class="content">
+          <h2>Key indicators shown</h2>
+          <div class="kpis">
+            <div class="kpi"><h4>Seismic events</h4><div class="metric">358</div></div>
+            <div class="kpi"><h4>Max magnitude</h4><div class="metric">2.1</div></div>
+            <div class="kpi"><h4>Avg flow (m³/h)</h4><div class="metric">7.35</div></div>
+            <div class="kpi"><h4>Avg inj pressure (bar)</h4><div class="metric">24.3</div></div>
+          </div>
+          <p class="muted">Values match the demo period in the dashboards.</p>
+        </div>
+      </section>
+
+      <!-- Slide 5 -->
+      <section class="slide">
+        <div class="content">
+          <h2>How to read the main chart</h2>
+          <ul>
+            <li><strong>Blue/green lines</strong> = injection flow and injection pressure.</li>
+            <li><strong>Dots</strong> = earthquakes (size/color can reflect magnitude).</li>
+            <li><strong>Colored bands</strong> = operating phases.</li>
+            <li>Right axis can show <strong>probability (pTLS)</strong> for risk.</li>
+          </ul>
+          <p>Zoom, pan, reset, and toggle series with the checkboxes to explore.</p>
+        </div>
+      </section>
+
+      <!-- Slide 6 -->
+      <section class="slide">
+        <div class="content">
+          <h2>What the data tells us</h2>
+          <ul>
+            <li>Most events occur during or shortly after higher injection periods.</li>
+            <li>Setting flow to <em>0</em> when not producing makes patterns clear.</li>
+            <li>Pressures help explain when small quakes are more likely.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Slide 7 -->
+      <section class="slide">
+        <div class="content">
+          <h2>How to demo (2 minutes)</h2>
+          <ul>
+            <li>Open the Operational dashboard → change date range → show KPIs update.</li>
+            <li>Toggle <em>inj_flow</em> and <em>inj_whp</em> → point out seismic dots.</li>
+            <li>Open Risk dashboard → show probability curves and thresholds.</li>
+          </ul>
+          <div class="links">
+            <a class="link" href="./PRESENTATION_READY.md" target="_blank">Read demo script ↗</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Slide 8 -->
+      <section class="slide">
+        <div class="content">
+          <h2>Next steps</h2>
+          <ul>
+            <li>Connect to real CSVs (hourly prepared data) for live KPIs.</li>
+            <li>Add thresholds and simple alerts on the chart.</li>
+            <li>Export view as PNG/CSV for reports.</li>
+          </ul>
+          <p class="muted">This can stay frontend-only using Chart.js and CSV parsing.</p>
+        </div>
+      </section>
+    </main>
+
+    <div class="nav" id="nav"></div>
+  </div>
+
+  <script>
+    // Simple slide controller
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const nav = document.getElementById('nav');
+    const bar = document.getElementById('bar');
+    let i = 0;
+
+    function update(){
+      slides.forEach((s,idx)=>{
+        s.classList.toggle('active', idx===i);
+      });
+      const pct = ((i+1)/slides.length)*100; bar.style.width = pct+'%';
+      nav.querySelectorAll('.dot').forEach((d,idx)=>d.classList.toggle('active', idx===i));
+    }
+
+    function next(){ i = Math.min(i+1, slides.length-1); update(); }
+    function prev(){ i = Math.max(i-1, 0); update(); }
+
+    // Build dots
+    slides.forEach((_,idx)=>{
+      const d=document.createElement('button');
+      d.className='dot'+(idx===0?' active':'');
+      d.title = 'Slide '+(idx+1);
+      d.addEventListener('click',()=>{ i=idx; update(); });
+      nav.appendChild(d);
+    });
+
+    // Controls
+    document.getElementById('nextBtn').addEventListener('click', next);
+    document.getElementById('prevBtn').addEventListener('click', prev);
+    document.getElementById('fullBtn').addEventListener('click', ()=>{
+      if(document.fullscreenElement){ document.exitFullscreen(); }
+      else { document.documentElement.requestFullscreen(); }
+    });
+
+    // Keyboard
+    window.addEventListener('keydown', (e)=>{
+      if(['ArrowRight','PageDown','Space'].includes(e.key)) next();
+      if(['ArrowLeft','PageUp'].includes(e.key)) prev();
+    });
+
+    update();
+  </script>
+</body>
+</html>

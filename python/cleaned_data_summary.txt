@@ -1,0 +1,22 @@
+CLEANED DATASETS - SUMMARY STATISTICS
+==================================================
+Generated on: 2025-10-12 19:55:00
+
+SEISMIC EVENTS DATASET
+------------------------------
+Total events: 378
+Magnitude range: -1.00 to 2.09
+Average magnitude: -0.16
+Time span: 2394 days
+Date range: 2018-12-05 to 2025-06-25
+
+OPERATIONAL METRICS DATASET (Sample)
+------------------------------
+Sample size: 10,000
+Sample time span: 48 days
+
+Key Metrics Summary:
+  inj_flow: mean=11.52, std=24.24
+  prod_flow: mean=0.00, std=0.00
+  inj_temp: mean=23.26, std=17.37
+  prod_temp: mean=42.24, std=37.54
