@@ -64,6 +64,10 @@ TROUBLESHOOTING.md
 *.pptx
 image/
 
+# API documentation (local only)
+api/API_GUIDE.md
+api/API_SIMPLE.md
+
 # Temporary files
 *.tmp
 *.log
