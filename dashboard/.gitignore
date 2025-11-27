@@ -24,15 +24,18 @@ package-lock.json
 .DS_Store
 Thumbs.db
 
-# Data files - DO NOT PUSH TO GITHUB
-# All CSV files are excluded (too large, sensitive data)
-*.csv
-data/
-assets/data/
+# Data files - Sample data allowed for deployment
+# Large sensitive CSV files are excluded
+# Small sample CSV files in api/data/ are allowed
+data/*.csv
+assets/data/**/*.csv
 
 # Keep folder structure with placeholder
 !data/.gitkeep
 !data/README.md
+
+# Allow sample data in api/data folder
+!api/data/*.csv
 
 # Model files - DO NOT PUSH (too large, ~100MB+)
 *.h5
