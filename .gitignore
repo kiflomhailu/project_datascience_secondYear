@@ -35,15 +35,39 @@ desktop.ini
 # But keep structure examples if needed (commented out for safety)
 # !python/example_data_sample.csv
 
-# Duplicate/Copy folders
+# Duplicate/Copy folders and files
 *- Copy*/
 **/* - Copy*
+**/*(1)*
+**/*(2)*
+**/*(3)*
+**/* copy*
+**/* Copy*
 
-# Large PDFs and media (uncomment if too large)
-# *.pdf
-# *.png
-# *.jpg
-# *.jpeg
+# Error files
+=*
+*.tmp
+*.temp
+
+# Large PDFs and media - DO NOT PUSH
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.mp4
+*.avi
+
+# Model files - DO NOT PUSH (too large and may contain sensitive data)
+*.h5
+*.hdf5
+*.cbm
+*.pkl
+*.joblib
+*.pt
+*.pth
+*.onnx
+*.pb
 
 # Node modules (if you add any)
 node_modules/
@@ -61,4 +85,11 @@ build/
 
 # Logs
 *.log
+*.log.*
+
+# Large files and backups
+*.bak
+*.backup
+*.old
+*.orig
 

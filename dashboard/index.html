@@ -10,7 +10,7 @@
   Features:
   - Operational metrics visualization (flow, pressure, temperature)
   - Seismic activity monitoring (magnitude, event counts)
-  - LSTM-based 7-day risk forecast
+  - LSTM-based 2-day risk forecast
   - Interactive time-series charts with zoom/pan
   - Real-time data from CSV files via Flask API
   - Metric selection checkboxes for customizable views
@@ -53,111 +53,219 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   
   <style>
-    * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; height: 100%; }
-    body {
-      font-family: Inter, system-ui, -apple-system, sans-serif;
-      background: #f5f7fa;
-      color: #1a202c;
+    * { 
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
     
-    #root { min-height: 100vh; }
+    html, body { 
+      margin: 0; 
+      padding: 0; 
+      height: 100%; 
+      overflow-x: hidden;
+    }
     
-    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+      background-size: 400% 400%;
+      animation: gradientShift 15s ease infinite;
+      color: #1a202c;
+      min-height: 100vh;
+    }
     
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    
+    #root { 
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container { 
+      max-width: 1600px; 
+      margin: 0 auto; 
+      padding: 0;
+    }
+    
+    /* Enhanced Header */
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 20px;
-      padding-bottom: 20px;
-      border-bottom: 2px solid #e2e8f0;
+      margin-bottom: 30px;
+      padding: 25px 30px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.3);
     }
     
-    .logo { font-size: 24px; font-weight: 700; color: #4c51bf; }
-    .subtitle { color: #718096; font-size: 14px; }
+    .logo { 
+      font-size: 28px; 
+      font-weight: 800; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.5px;
+    }
     
+    .subtitle { 
+      color: #64748b; 
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 4px;
+    }
+    
+    /* Enhanced Navigation Tabs */
     .nav-tabs {
       display: flex;
-      gap: 10px;
-      margin-bottom: 20px;
+      gap: 12px;
+      margin-bottom: 25px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 8px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     }
     
     .nav-tab {
-      padding: 12px 24px;
+      padding: 14px 28px;
       border: none;
-      background: white;
+      background: transparent;
       cursor: pointer;
-      border-radius: 8px;
+      border-radius: 12px;
       font-weight: 600;
-      color: #718096;
-      transition: all 0.2s;
+      font-size: 15px;
+      color: #64748b;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
     }
     
-    .nav-tab:hover { background: #f7fafc; color: #4c51bf; }
-    .nav-tab.active { background: #4c51bf; color: white; }
+    .nav-tab:hover { 
+      background: rgba(102, 126, 234, 0.1); 
+      color: #667eea;
+      transform: translateY(-2px);
+    }
     
+    .nav-tab.active { 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      transform: translateY(-2px);
+    }
+    
+    /* Enhanced KPI Cards */
     .kpis {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
-      margin-bottom: 20px;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
     }
     
     .kpi-card {
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      border: 1px solid #e2e8f0;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    
+    .kpi-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+    }
+    
+    .kpi-card:hover::before {
+      opacity: 1;
     }
     
     .kpi-card h4 {
       font-size: 12px;
-      font-weight: 600;
-      color: #718096;
-      margin: 0 0 10px 0;
+      font-weight: 700;
+      color: #64748b;
+      margin: 0 0 12px 0;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 1px;
     }
     
     .kpi-value {
-      font-size: 32px;
-      font-weight: 700;
-      color: #2d3748;
+      font-size: 36px;
+      font-weight: 800;
+      color: #1e293b;
       margin: 0;
+      line-height: 1.2;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
     
+    /* Enhanced Chart Container */
     .chart-container {
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      margin-bottom: 20px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 24px;
+      padding: 30px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+      margin-bottom: 25px;
       position: relative;
-      height: 450px;
+      min-height: 500px;
       width: 100%;
+      border: 1px solid rgba(255, 255, 255, 0.5);
     }
     
     .chart-container canvas {
-      max-height: 400px !important;
+      max-height: 450px !important;
       width: 100% !important;
     }
     
     .chart-container h3 {
-      font-size: 16px;
-      font-weight: 600;
-      margin: 0 0 20px 0;
-      color: #2d3748;
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0 0 25px 0;
+      color: #1e293b;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
     
+    /* Enhanced Date Selector */
     .date-selector {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      margin-bottom: 20px;
+      gap: 15px;
+      margin-bottom: 25px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     }
     
     @media (max-width: 768px) {
@@ -169,68 +277,201 @@
     .date-input {
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 8px;
     }
     
     .date-input label {
       font-size: 12px;
-      font-weight: 600;
-      color: #718096;
+      font-weight: 700;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
     
     .date-input input {
-      padding: 10px;
-      border: 1px solid #cbd5e0;
-      border-radius: 8px;
+      padding: 12px 16px;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
       font-size: 14px;
+      transition: all 0.3s;
+      background: white;
     }
     
-    .dark-mode {
-      background: #0b1220;
-      color: #e6edf7;
+    .date-input input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
     }
     
-    .dark-mode .kpi-card {
-      background: #121a2b;
-      border-color: #1f2a44;
-      color: #e6edf7;
-    }
-    
-    .dark-mode .chart-container {
-      background: #121a2b;
-      border-color: #1f2a44;
-    }
-    
+    /* Enhanced Risk Indicator */
     .risk-indicator {
-      width: 150px;
-      height: 150px;
+      width: 180px;
+      height: 180px;
       border-radius: 50%;
-      margin: 0 auto 20px;
+      margin: 0 auto 25px;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      font-size: 48px;
-      font-weight: 700;
-      border: 8px solid;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      font-size: 56px;
+      font-weight: 800;
+      border: 12px solid;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .risk-indicator::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
+      animation: shimmer 3s infinite;
+    }
+    
+    @keyframes shimmer {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .risk-indicator:hover {
+      transform: scale(1.05);
+      box-shadow: 0 25px 70px rgba(0, 0, 0, 0.4);
     }
     
     .risk-low {
-      background: #1db954;
-      border-color: #16a085;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      border-color: #047857;
       color: white;
     }
     
     .risk-medium {
-      background: #f59e0b;
-      border-color: #d97706;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      border-color: #b45309;
       color: white;
     }
     
     .risk-high {
-      background: #ef4444;
-      border-color: #dc2626;
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      border-color: #b91c1c;
       color: white;
+    }
+    
+    /* Status Banner Enhancement */
+    .status-banner {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px 30px;
+      border-radius: 16px;
+      margin-bottom: 25px;
+      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    
+    /* Metric Checkboxes Enhancement */
+    .metrics-grid {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 25px;
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      margin-bottom: 25px;
+    }
+    
+    /* Button Enhancements */
+    button {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    /* Scrollbar Styling */
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    }
+    
+    /* Loading Animation */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .loading {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    
+    /* Card Hover Effects */
+    .card-hover {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .card-hover:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 1024px) {
+      .container {
+        padding: 15px;
+      }
+      
+      header {
+        padding: 20px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+      }
+      
+      .kpis {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+      
+      .kpis {
+        grid-template-columns: 1fr;
+      }
+      
+      .chart-container {
+        padding: 20px;
+        min-height: 400px;
+      }
     }
   </style>
 </head>
@@ -271,10 +512,10 @@
       }
       
       /**
-       * Request 7-day seismic risk forecast from LSTM model
+       * Request 2-day seismic risk forecast from LSTM model
        * @param {string} startDate - Starting date for forecast (ISO format)
        * @param {Array} historicalData - Last 24 hours of operational data for model input
-       * @returns {Array} 7-day forecast with risk levels and probabilities
+       * @returns {Array} 2-day forecast with risk levels and probabilities
        */
       async getForecast(startDate, historicalData) {
         try {
@@ -294,7 +535,7 @@
             throw new Error(error.error || 'Forecast failed');
           }
           const result = await response.json();
-          return result.forecast; // Returns array of 7 forecast days
+          return result.forecast; // Returns array of 2 forecast days
         } catch (error) {
           console.error('Forecast error:', error);
           throw error;
@@ -323,10 +564,16 @@
             throw new Error(error.error || 'Failed to load operational data');
           }
           const result = await response.json();
-          return result.data; // Return the data array
+          console.log('📊 API Response:', { 
+            dataLength: result.data?.length || 0, 
+            count: result.count || 0,
+            source: result.source || 'unknown',
+            message: result.message || 'none'
+          });
+          return result.data || []; // Return the data array (empty array if missing)
         } catch (error) {
-          console.error('Operational data error:', error);
-          throw error;
+          console.error('❌ Operational data error:', error);
+          return []; // Return empty array instead of throwing
         }
       }
       
@@ -504,38 +751,47 @@
       }
     }
     
-    // KPI Card Component
+    // Enhanced KPI Card Component
     function KPICard({ title, value, color, subtitle }) {
+      // For risk level text, use solid color for better visibility
+      const isRiskLevel = typeof value === 'string' && ['LOW', 'MEDIUM', 'YELLOW', 'ORANGE', 'RED', 'HIGH'].includes(value.toUpperCase());
+      
       return (
-        <div className="kpi-card" style={{
-          background: 'white',
-          borderRadius: '12px',
-          padding: '20px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-          transition: 'transform 0.2s, box-shadow 0.2s',
-          border: `2px solid ${color}20`
+        <div className="kpi-card card-hover" style={{
+          borderTop: `4px solid ${color}`,
+          position: 'relative'
         }}>
           <h4 style={{ 
-            fontSize: '13px', 
+            fontSize: '12px', 
             color: '#64748b', 
-            margin: '0 0 8px 0',
-            fontWeight: '600',
+            margin: '0 0 12px 0',
+            fontWeight: '700',
             textTransform: 'uppercase',
-            letterSpacing: '0.5px'
+            letterSpacing: '1px'
           }}>
             {title}
           </h4>
           <p className="kpi-value" style={{ 
-            color, 
-            fontSize: '32px',
-            fontWeight: '700',
+            color: isRiskLevel ? color : 'inherit', 
+            fontSize: '42px',
+            fontWeight: '800',
             margin: '0',
-            lineHeight: '1.2'
+            lineHeight: '1.2',
+            background: isRiskLevel ? 'none' : `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`,
+            WebkitBackgroundClip: isRiskLevel ? 'unset' : 'text',
+            WebkitTextFillColor: isRiskLevel ? color : 'transparent',
+            backgroundClip: isRiskLevel ? 'unset' : 'text',
+            textShadow: isRiskLevel ? `0 2px 4px rgba(0,0,0,0.1)` : 'none'
           }}>
             {value}
           </p>
           {subtitle && (
-            <p style={{ fontSize: '11px', color: '#94a3b8', margin: '8px 0 0 0' }}>
+            <p style={{ 
+              fontSize: '12px', 
+              color: '#94a3b8', 
+              margin: '12px 0 0 0',
+              fontWeight: '500'
+            }}>
               {subtitle}
             </p>
           )}
@@ -555,11 +811,21 @@
     // - KPI cards showing summary statistics
     // ============================================================================
     function OperationalDashboard() {
-      // State management for date/time range selection
-      const [startDate, setStartDate] = useState('2018-11-28');  // Default start date
-      const [startTime, setStartTime] = useState('00:00');        // Default start time
-      const [endDate, setEndDate] = useState('2018-12-02');      // Default end date
-      const [endTime, setEndTime] = useState('23:59');           // Default end time
+      // State management for date/time range selection - default to last 30 days
+      const getDefaultDates = () => {
+        const today = new Date();
+        const thirtyDaysAgo = new Date(today);
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+        return {
+          start: thirtyDaysAgo.toISOString().split('T')[0],
+          end: today.toISOString().split('T')[0]
+        };
+      };
+      const defaultDates = getDefaultDates();
+      const [startDate, setStartDate] = useState(defaultDates.start);
+      const [startTime, setStartTime] = useState('00:00');
+      const [endDate, setEndDate] = useState(defaultDates.end);
+      const [endTime, setEndTime] = useState('23:59');
       
       // API connection status tracking
       const [apiStatus, setApiStatus] = useState('checking');    // 'checking' | 'connected' | 'disconnected'
@@ -601,9 +867,9 @@
       // ============================================================================
       useEffect(() => {
         api.healthCheck().then(result => {
-          if (result.status === 'healthy' && result.model_loaded) {
+          if (result.status === 'healthy' && result.lstm_loaded) {
             setApiStatus('connected');
-            console.log('✅ API Connected - Model loaded:', result.model_loaded);
+            console.log('✅ API Connected - LSTM loaded:', result.lstm_loaded, 'CatBoost loaded:', result.catboost_loaded);
           } else {
             setApiStatus('disconnected');
             console.log('⚠️ API not available - Please start the API server');
@@ -624,11 +890,70 @@
       // ============================================================================
       useEffect(() => {
         const loadData = async () => {
-          // Only try to load from API if it's connected
+          // Initialize empty chart if API is not connected
           if (apiStatus !== 'connected') {
             console.log('⏸️ API not connected - No data will be displayed');
             setUsingRealData(false);
             setLoading(false);
+            
+            // Create empty chart to show "API Not Connected" message
+            setTimeout(() => {
+              const ctx = document.getElementById('operationalChart');
+              if (ctx) {
+                if (chartInstanceRef.current) {
+                  chartInstanceRef.current.destroy();
+                }
+                chartInstanceRef.current = new Chart(ctx, {
+                  type: 'line',
+                  data: {
+                    labels: ['API', 'Not', 'Connected'],
+                    datasets: [{
+                      label: 'No Data',
+                      data: [0, 0, 0],
+                      borderColor: 'rgba(239, 68, 68, 0.3)',
+                      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                      borderWidth: 2,
+                      pointRadius: 0
+                    }]
+                  },
+                  options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: { display: false },
+                      title: {
+                        display: true,
+                        text: '⚠️ API Not Connected - Please start the API server (cd api && python app.py)',
+                        font: { size: 16, weight: 'bold' },
+                        color: '#ef4444',
+                        padding: 20
+                      },
+                      tooltip: { enabled: false }
+                    },
+                    scales: {
+                      x: { 
+                        display: true,
+                        title: {
+                          display: true,
+                          text: 'Start API server to load data',
+                          color: '#ef4444',
+                          font: { size: 12, weight: 'bold' }
+                        }
+                      },
+                      y: { 
+                        display: true,
+                        title: {
+                          display: true,
+                          text: 'No data available',
+                          color: '#ef4444',
+                          font: { size: 12, weight: 'bold' }
+                        }
+                      }
+                    }
+                  }
+                });
+              }
+            }, 100);
             return;
           }
           
@@ -641,7 +966,7 @@
             const operationalData = await api.getOperationalData(startDateTime, endDateTime, 500);
             const seismicData = await api.getSeismicData(startDateTime, endDateTime) || [];
             
-            if (operationalData && operationalData.length > 0) {
+            if (operationalData && Array.isArray(operationalData) && operationalData.length > 0) {
               setUsingRealData(true);
               console.log(`✅ Loaded ${operationalData.length} operational records and ${seismicData.length} seismic events`);
               
@@ -749,8 +1074,8 @@
                   datasets.push({
                     label: 'Luckett Magnitude',
                     data: magnitudePoints.length > 0 ? magnitudePoints : sampledMagnitude.map((val, idx) => ({x: idx, y: val})),
-                    borderColor: 'rgb(34, 197, 94)',
-                    backgroundColor: 'rgba(34, 197, 94, 0.8)',
+                    borderColor: 'rgb(168, 85, 247)',
+                    backgroundColor: 'rgba(168, 85, 247, 0.8)',
                     borderWidth: 0,
                     pointRadius: 4,
                     pointHoverRadius: 6,
@@ -962,7 +1287,7 @@
             dataset.hidden = !visibleMetrics.injWhp;
           } else if (dataset.label === 'Luckett Magnitude') {
             dataset.hidden = !visibleMetrics.magnitude;
-          } else if (dataset.label === 'p_7d_yellow' || dataset.label === 'p_7d_orange' || dataset.label === 'p_7d_red') {
+          } else if (dataset.label === 'p_2d_yellow' || dataset.label === 'p_2d_orange' || dataset.label === 'p_2d_red') {
             dataset.hidden = !visibleMetrics.ptls;
           }
         });
@@ -970,76 +1295,158 @@
         chart.update();
       }, [visibleMetrics, usingRealData, loading]);
       
-      // Cleanup chart on unmount
+      // Initialize chart on mount (even if API is disconnected)
       useEffect(() => {
+        // Small delay to ensure DOM is ready
+        const timer = setTimeout(() => {
+          const ctx = document.getElementById('operationalChart');
+          if (ctx && !chartInstanceRef.current) {
+            // Only create empty chart if API is not connected and no chart exists
+            if (apiStatus === 'disconnected') {
+              chartInstanceRef.current = new Chart(ctx, {
+                type: 'line',
+                data: {
+                  labels: ['Start', 'API', 'Server'],
+                  datasets: [{
+                    label: 'No Data',
+                    data: [0, 0, 0],
+                    borderColor: 'rgba(239, 68, 68, 0.3)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: true
+                  }]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { display: false },
+                    title: {
+                      display: true,
+                      text: '⚠️ API Not Connected - Please start the API server',
+                      font: { size: 18, weight: 'bold' },
+                      color: '#ef4444',
+                      padding: { top: 20, bottom: 20 }
+                    },
+                    tooltip: { enabled: false }
+                  },
+                  scales: {
+                    x: { 
+                      display: true,
+                      title: {
+                        display: true,
+                        text: 'Run: cd api && python app.py',
+                        color: '#ef4444',
+                        font: { size: 14, weight: 'bold' }
+                      },
+                      grid: { display: false }
+                    },
+                    y: { 
+                      display: true,
+                      title: {
+                        display: true,
+                        text: 'No data available',
+                        color: '#ef4444',
+                        font: { size: 14, weight: 'bold' }
+                      },
+                      grid: { display: false }
+                    }
+                  }
+                }
+              });
+            }
+          }
+        }, 200);
+        
         return () => {
+          clearTimeout(timer);
           if (chartInstanceRef.current) {
             chartInstanceRef.current.destroy();
             chartInstanceRef.current = null;
           }
         };
-      }, []);
+      }, [apiStatus]);
       
       return (
         <div>
           <h2>Operational & Seismic Activity</h2>
           
           {apiStatus === 'connected' && usingRealData && (
-            <div style={{ 
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
-              color: 'white', 
-              padding: '15px 20px', 
-              borderRadius: '8px', 
-              marginBottom: '20px',
+            <div className="status-banner" style={{ 
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+              flexWrap: 'wrap',
+              gap: '15px'
             }}>
               <div>
-                <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '4px' }}>
+                <div style={{ fontSize: '14px', opacity: 0.95, marginBottom: '6px', fontWeight: '600', letterSpacing: '0.5px' }}>
                   📊 Real Data Connected
                 </div>
-                <div style={{ fontSize: '18px', fontWeight: '600' }}>
+                <div style={{ fontSize: '20px', fontWeight: '700', lineHeight: '1.3' }}>
                   Loading operational metrics from CSV files
                 </div>
               </div>
               {loading && (
                 <div style={{ 
-                  background: 'rgba(255,255,255,0.2)', 
-                  padding: '8px 16px', 
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '600'
+                  background: 'rgba(255,255,255,0.25)', 
+                  backdropFilter: 'blur(10px)',
+                  padding: '10px 20px', 
+                  borderRadius: '12px',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  letterSpacing: '0.5px',
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
                 }}>
-                  Loading...
+                  ⏳ Loading...
                 </div>
               )}
             </div>
           )}
           
           {apiStatus === 'disconnected' && (
-            <div style={{ 
-              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', 
-              color: 'white', 
-              padding: '15px 20px', 
-              borderRadius: '8px', 
-              marginBottom: '20px',
+            <div className="status-banner" style={{ 
+              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+              flexWrap: 'wrap',
+              gap: '15px',
+              marginBottom: '25px'
             }}>
               <div>
-                <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '4px' }}>
+                <div style={{ fontSize: '14px', opacity: 0.95, marginBottom: '6px', fontWeight: '600', letterSpacing: '0.5px' }}>
                   ⚠️ API Not Connected
                 </div>
-                <div style={{ fontSize: '18px', fontWeight: '600' }}>
+                <div style={{ fontSize: '20px', fontWeight: '700', lineHeight: '1.3', marginBottom: '8px' }}>
                   Please start the API server to view real data
                 </div>
-                <div style={{ fontSize: '12px', opacity: 0.9, marginTop: '8px' }}>
-                  Run: <code style={{ background: 'rgba(0,0,0,0.2)', padding: '2px 6px', borderRadius: '4px' }}>cd api && python app.py</code>
+                <div style={{ 
+                  fontSize: '13px',
+                  fontFamily: 'monospace',
+                  background: 'rgba(255,255,255,0.2)',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  display: 'inline-block',
+                  marginTop: '8px'
+                }}>
+                  Run: <code style={{ background: 'rgba(0,0,0,0.2)', padding: '4px 8px', borderRadius: '4px', fontWeight: '700' }}>cd api && python app.py</code>
                 </div>
+              </div>
+              <div style={{ 
+                background: 'rgba(255,255,255,0.25)', 
+                backdropFilter: 'blur(10px)',
+                padding: '10px 20px', 
+                borderRadius: '12px',
+                fontSize: '13px',
+                fontWeight: '700',
+                letterSpacing: '0.5px',
+                border: '1px solid rgba(255,255,255,0.3)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+              }}>
+                🔌 Connect API
               </div>
             </div>
           )}
@@ -1130,20 +1537,23 @@
           </div>
           
           <div style={{ 
-            background: 'white', 
-            padding: '15px', 
-            borderRadius: '8px', 
+            background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
+            padding: '20px', 
+            borderRadius: '16px', 
             marginBottom: '20px',
-            border: '1px solid #e2e8f0'
+            border: '2px solid rgba(102, 126, 234, 0.15)',
+            boxShadow: '0 4px 12px rgba(102, 126, 234, 0.08)'
           }}>
             <label style={{ 
-              display: 'block', 
-              marginBottom: '10px', 
-              fontWeight: '600', 
-              fontSize: '14px',
-              color: '#2d3748'
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '15px', 
+              fontWeight: '700', 
+              fontSize: '16px',
+              color: '#1f2937'
             }}>
-              Select Metrics to Display:
+              ⚙️ Select Metrics to Display:
             </label>
             <div style={{ 
               display: 'grid', 
@@ -1439,12 +1849,12 @@
     // ============================================================================
     // RISK DASHBOARD COMPONENT
     // ============================================================================
-    // Displays LSTM model predictions for 7-day seismic risk forecast
+    // Displays Ensemble model predictions for 2-day seismic risk forecast
     // Features:
     // - Current risk level indicator (Green/Yellow/Orange/Red)
-    // - 7-day probability forecast chart
+    // - 2-day probability forecast chart
     // - Alert probability cards (Yellow/Orange/Red)
-    // - Day-by-day risk status for next 7 days
+    // - Day-by-day risk status for next 2 days
     // Uses real operational data to generate predictions via LSTM model
     // ============================================================================
     function RiskDashboard() {
@@ -1456,6 +1866,8 @@
       const [forecastData, setForecastData] = useState(null);
       const [currentRisk, setCurrentRisk] = useState('MEDIUM');
       const [riskProbabilities, setRiskProbabilities] = useState({ yellow: 0, orange: 0, red: 0 });
+      const [testData, setTestData] = useState(null);
+      const [showTestData, setShowTestData] = useState(false);
       
       // Check API and load forecast data
       useEffect(() => {
@@ -1463,9 +1875,10 @@
           try {
             // Check API health first
             const health = await api.healthCheck();
-            if (health.status !== 'healthy' || !health.model_loaded) {
+            if (health.status !== 'healthy' || !health.lstm_loaded) {
               setApiStatus('disconnected');
               console.log('⚠️ API not available - Please start the API server');
+              console.log('Health check response:', health);
               return;
             }
             
@@ -1479,16 +1892,25 @@
             
             try {
               console.log('📊 Loading real data from API...');
-              const response = await fetch(`${API_BASE_URL}/data/latest`);
+              const response = await fetch(`${api.baseURL}/data/latest`);
               if (response.ok) {
                 const result = await response.json();
-                if (result.data && result.data.length >= 24) {
-                  console.log(`✅ Loaded ${result.records_loaded} real records from CSV files!`);
+                if (result.data && result.data.length > 0) {
+                  const recordCount = result.records_loaded || result.data.length;
+                  console.log(`✅ Loaded ${recordCount} records (${result.source || 'sample'} data)!`);
                   setUsingRealData(true);
                   isRealData = true;
-                  dataToUse = result.data.slice(-24); // Last 24 hours
+                  // Use available data (at least 1 record, up to 24)
+                  const dataToUseCount = Math.min(result.data.length, 24);
+                  dataToUse = result.data.slice(-dataToUseCount);
+                  // If we have less than 24, pad with the last record
+                  while (dataToUse.length < 24 && dataToUse.length > 0) {
+                    dataToUse.unshift({...dataToUse[0]});
+                  }
+                  // Store test data for display
+                  setTestData(dataToUse);
                 } else {
-                  throw new Error('Not enough data');
+                  throw new Error('No data available');
                 }
               } else {
                 throw new Error('API returned error');
@@ -1501,7 +1923,7 @@
               throw new Error('Cannot generate forecast without real data. Please ensure API is running and CSV files are available.');
             }
             
-            // Get 7-day forecast from API using real data
+            // Get 2-day forecast from API using real data
             console.log('📡 Requesting forecast from API with', dataToUse.length, 'hours of data');
             const forecast = await api.getForecast(now.toISOString(), dataToUse);
             console.log('📊 Received forecast response:', forecast);
@@ -1511,18 +1933,44 @@
             }
             
             // Format forecast data for chart
-            const dates = forecast.map(f => new Date(f.date).toISOString().split('T')[0]);
+            const dates = forecast.map(f => {
+              try {
+                const date = new Date(f.date);
+                if (isNaN(date.getTime())) {
+                  // If date is invalid, use index-based date
+                  const baseDate = new Date(now);
+                  baseDate.setDate(baseDate.getDate() + forecast.indexOf(f));
+                  return baseDate.toISOString().split('T')[0];
+                }
+                return date.toISOString().split('T')[0];
+              } catch (e) {
+                const baseDate = new Date(now);
+                baseDate.setDate(baseDate.getDate() + forecast.indexOf(f));
+                return baseDate.toISOString().split('T')[0];
+              }
+            });
             const yellow = forecast.map(f => {
-              const val = (f.probabilities?.yellow || 0) * 100;
-              return Math.max(0, val); // Ensure non-negative
+              const probs = f.probabilities || {};
+              const val = (probs.yellow || probs.p_yellow || 0) * 100;
+              return Math.max(0, Math.min(100, val)); // Ensure 0-100 range
             });
             const orange = forecast.map(f => {
-              const val = (f.probabilities?.orange || 0) * 100;
-              return Math.max(0, val);
+              const probs = f.probabilities || {};
+              const val = (probs.orange || probs.p_orange || 0) * 100;
+              return Math.max(0, Math.min(100, val));
             });
             const red = forecast.map(f => {
-              const val = (f.probabilities?.red || 0) * 100;
-              return Math.max(0, val);
+              const probs = f.probabilities || {};
+              const val = (probs.red || probs.p_red || 0) * 100;
+              return Math.max(0, Math.min(100, val));
+            });
+            
+            console.log('📊 Chart data prepared:', {
+              dates: dates,
+              yellow: yellow,
+              orange: orange,
+              red: red,
+              forecastLength: forecast.length
             });
             
             console.log('📈 Chart data - Yellow:', yellow.slice(0, 3), 'Orange:', orange.slice(0, 3), 'Red:', red.slice(0, 3));
@@ -1595,7 +2043,7 @@
                   labels: dates,
                   datasets: [
                     {
-                      label: 'p_7d_yellow',
+                      label: 'p_2d_yellow',
                       data: yellow,
                       borderColor: 'rgb(251, 191, 36)',
                       backgroundColor: 'rgba(251, 191, 36, 0.1)',
@@ -1604,7 +2052,7 @@
                       fill: true
                     },
                     {
-                      label: 'p_7d_orange',
+                      label: 'p_2d_orange',
                       data: orange,
                       borderColor: 'rgb(249, 115, 22)',
                       backgroundColor: 'rgba(249, 115, 22, 0.1)',
@@ -1613,7 +2061,7 @@
                       fill: true
                     },
                     {
-                      label: 'p_7d_red',
+                      label: 'p_2d_red',
                       data: red,
                       borderColor: 'rgb(239, 68, 68)',
                       backgroundColor: 'rgba(239, 68, 68, 0.1)',
@@ -1630,7 +2078,7 @@
                     legend: { display: true, position: 'top' },
                     title: { 
                       display: true, 
-                      text: isRealData ? '7-Day Seismic Risk Forecast - LSTM Model Predictions (Real Data)' : '7-Day Seismic Risk Forecast - LSTM Model Predictions (API Required)',
+                      text: isRealData ? '2-Day Seismic Risk Forecast - Ensemble Model Predictions (Real Data)' : '2-Day Seismic Risk Forecast - Ensemble Model Predictions (API Required)',
                       font: { size: 16, weight: 'bold' }
                     },
                     tooltip: {
@@ -1657,7 +2105,7 @@
                   scales: {
                     x: { 
                       display: true, 
-                      title: { display: true, text: 'Date (Next 7 Days)', font: { size: 12, weight: 'bold' } },
+                      title: { display: true, text: 'Date (Next 2 Days)', font: { size: 12, weight: 'bold' } },
                       grid: { color: 'rgba(0,0,0,0.05)' }
                     },
                     y: { 
@@ -1705,17 +2153,17 @@
               } 
             />
             <KPICard 
-              title="Yellow Alert (7d)" 
+              title="Yellow Alert (2d)" 
               value={`${riskProbabilities.yellow.toFixed(1)}%`} 
               color="#fbbf24" 
             />
             <KPICard 
-              title="Orange Alert (7d)" 
+              title="Orange Alert (2d)" 
               value={`${riskProbabilities.orange.toFixed(1)}%`} 
               color="#f97316" 
             />
             <KPICard 
-              title="Red Alert (7d)" 
+              title="Red Alert (2d)" 
               value={`${riskProbabilities.red.toFixed(1)}%`} 
               color="#ef4444" 
             />
@@ -1725,38 +2173,171 @@
             <div style={{ 
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
               color: 'white', 
-              padding: '15px 20px', 
-              borderRadius: '8px', 
-              marginBottom: '20px',
+              padding: '20px 30px', 
+              borderRadius: '16px', 
+              marginBottom: '25px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+              boxShadow: '0 8px 24px rgba(102, 126, 234, 0.3)',
+              flexWrap: 'wrap',
+              gap: '15px'
             }}>
               <div>
-                <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '4px' }}>
-                  🤖 LSTM Model Active
+                <div style={{ fontSize: '14px', opacity: 0.95, marginBottom: '6px', fontWeight: '600', letterSpacing: '0.5px' }}>
+                  🤖 Ensemble Model Active (LSTM + CatBoost)
                 </div>
-                <div style={{ fontSize: '18px', fontWeight: '600' }}>
-                  {usingRealData ? 'Using Real Operational Data' : 'API Not Connected - Start API Server'} → Predicting 7-Day Seismic Risk
+                <div style={{ fontSize: '20px', fontWeight: '700', lineHeight: '1.3' }}>
+                  {usingRealData ? '✓ Using Real Operational Data' : '⚠ API Not Connected - Start API Server'} → Predicting 2-Day Seismic Risk
                 </div>
               </div>
               <div style={{ 
-                background: 'rgba(255,255,255,0.2)', 
-                padding: '8px 16px', 
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: '600'
+                background: 'rgba(255,255,255,0.25)', 
+                backdropFilter: 'blur(10px)',
+                padding: '10px 20px', 
+                borderRadius: '12px',
+                fontSize: '13px',
+                fontWeight: '700',
+                letterSpacing: '0.5px',
+                border: '1px solid rgba(255,255,255,0.3)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
               }}>
-                Model: lstm_model_ammad.h5
+                Model: lstm_model_ammad.h5 + CatBoost
               </div>
+            </div>
+          )}
+          
+          {/* Test Data Display Section */}
+          {testData && testData.length > 0 && (
+            <div style={{ marginBottom: '20px' }}>
+              <button
+                onClick={() => setShowTestData(!showTestData)}
+                style={{
+                  background: showTestData ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#e5e7eb',
+                  color: showTestData ? 'white' : '#374151',
+                  border: 'none',
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                {showTestData ? '▼' : '▶'} {showTestData ? 'Hide' : 'Show'} Test Data ({testData.length} records)
+              </button>
+              
+              {showTestData && (
+                <div style={{
+                  marginTop: '15px',
+                  background: 'white',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                  maxHeight: '500px',
+                  overflowY: 'auto'
+                }}>
+                  <h3 style={{ marginTop: 0, marginBottom: '15px', color: '#1f2937' }}>
+                    📊 Test Data Used for Prediction (Last {testData.length} hours)
+                  </h3>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ 
+                      width: '100%', 
+                      borderCollapse: 'collapse',
+                      fontSize: '12px'
+                    }}>
+                      <thead>
+                        <tr style={{ 
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          color: 'white'
+                        }}>
+                          <th style={{ padding: '10px', textAlign: 'left', border: '1px solid #ddd' }}>#</th>
+                          <th style={{ padding: '10px', textAlign: 'left', border: '1px solid #ddd' }}>Timestamp</th>
+                          <th style={{ padding: '10px', textAlign: 'right', border: '1px solid #ddd' }}>Inj Flow</th>
+                          <th style={{ padding: '10px', textAlign: 'right', border: '1px solid #ddd' }}>Inj Pressure</th>
+                          <th style={{ padding: '10px', textAlign: 'right', border: '1px solid #ddd' }}>Inj Temp</th>
+                          <th style={{ padding: '10px', textAlign: 'right', border: '1px solid #ddd' }}>Prod Temp</th>
+                          <th style={{ padding: '10px', textAlign: 'right', border: '1px solid #ddd' }}>Event Count</th>
+                          <th style={{ padding: '10px', textAlign: 'right', border: '1px solid #ddd' }}>Max Mag</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {testData.slice(-10).map((record, idx) => (
+                          <tr key={idx} style={{ 
+                            background: idx % 2 === 0 ? '#f9fafb' : 'white',
+                            borderBottom: '1px solid #e5e7eb'
+                          }}>
+                            <td style={{ padding: '8px', border: '1px solid #e5e7eb' }}>{testData.length - 10 + idx + 1}</td>
+                            <td style={{ padding: '8px', border: '1px solid #e5e7eb', fontFamily: 'monospace', fontSize: '11px' }}>
+                              {record.timestamp ? new Date(record.timestamp).toLocaleString() : 'N/A'}
+                            </td>
+                            <td style={{ padding: '8px', border: '1px solid #e5e7eb', textAlign: 'right' }}>
+                              {parseFloat(record.inj_flow || 0).toFixed(2)} m³/h
+                            </td>
+                            <td style={{ padding: '8px', border: '1px solid #e5e7eb', textAlign: 'right' }}>
+                              {parseFloat(record.inj_whp || 0).toFixed(2)} bar
+                            </td>
+                            <td style={{ padding: '8px', border: '1px solid #e5e7eb', textAlign: 'right' }}>
+                              {parseFloat(record.inj_temp || 0).toFixed(1)} °C
+                            </td>
+                            <td style={{ padding: '8px', border: '1px solid #e5e7eb', textAlign: 'right' }}>
+                              {parseFloat(record.prod_temp || 0).toFixed(1)} °C
+                            </td>
+                            <td style={{ padding: '8px', border: '1px solid #e5e7eb', textAlign: 'right' }}>
+                              {record.event_count || 0}
+                            </td>
+                            <td style={{ padding: '8px', border: '1px solid #e5e7eb', textAlign: 'right' }}>
+                              {parseFloat(record.max_magnitude || 0).toFixed(2)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {testData.length > 10 && (
+                      <div style={{ 
+                        marginTop: '10px', 
+                        fontSize: '12px', 
+                        color: '#6b7280',
+                        fontStyle: 'italic',
+                        textAlign: 'center'
+                      }}>
+                        Showing last 10 of {testData.length} records. Full data available in browser console.
+                      </div>
+                    )}
+                    <div style={{ 
+                      marginTop: '15px', 
+                      padding: '12px', 
+                      background: '#f3f4f6',
+                      borderRadius: '8px',
+                      fontSize: '12px'
+                    }}>
+                      <strong>Data Summary:</strong>
+                      <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                        <li>Total records: {testData.length}</li>
+                        <li>Avg Injection Flow: {(
+                          testData.reduce((sum, r) => sum + parseFloat(r.inj_flow || 0), 0) / testData.length
+                        ).toFixed(2)} m³/h</li>
+                        <li>Avg Injection Pressure: {(
+                          testData.reduce((sum, r) => sum + parseFloat(r.inj_whp || 0), 0) / testData.length
+                        ).toFixed(2)} bar</li>
+                        <li>Total Seismic Events: {testData.reduce((sum, r) => sum + (r.event_count || 0), 0)}</li>
+                        <li>Max Magnitude: {Math.max(...testData.map(r => parseFloat(r.max_magnitude || 0))).toFixed(2)}</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           
           <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
             <div className="chart-container" style={{ flex: 2 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <h3>7-Day Probability Forecast</h3>
+                <h3>2-Day Probability Forecast</h3>
                 {apiStatus === 'connected' && (
                   <span style={{ 
                     background: '#10b981', 
@@ -1867,9 +2448,9 @@
                   border: '1px solid #e2e8f0'
                 }}>
                   <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '10px', fontWeight: '600' }}>
-                    NEXT 7 DAYS FORECAST
+                    NEXT 2 DAYS FORECAST
                   </div>
-                  {forecastData.slice(0, 7).map((day, idx) => (
+                  {forecastData.slice(0, 2).map((day, idx) => (
                     <div key={idx} style={{ 
                       display: 'flex', 
                       justifyContent: 'space-between', 

@@ -82,10 +82,6 @@ python reverse_merge.py
 - Injection flow rate and pressure show correlations with seismic magnitude
 - ML model achieved good prediction accuracy on test data
 
-## 👥 Team
-
-[Add your team member names here]
-
 ## 📅 Project Timeline
 
 - **Sprint 1**: Data integration and dashboard prototyping
