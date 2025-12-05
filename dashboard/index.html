@@ -468,6 +468,45 @@
         grid-template-columns: 1fr;
       }
       
+      /* Fix zoom controls on mobile - wrap buttons */
+      .chart-container > div:first-child {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 10px !important;
+      }
+      
+      .chart-container > div:first-child > div:last-child {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        width: 100%;
+      }
+      
+      .chart-container > div:first-child > div:last-child button {
+        flex: 1 1 auto;
+        min-width: 60px;
+        padding: 8px 10px !important;
+        font-size: 11px !important;
+      }
+      
+      /* Fix risk dashboard layout on mobile - stack vertically */
+      .risk-dashboard-flex {
+        flex-direction: column !important;
+      }
+      
+      .risk-dashboard-flex > div {
+        flex: 1 1 auto !important;
+        width: 100% !important;
+        margin-bottom: 20px;
+      }
+      
+      /* Make risk indicator smaller on mobile */
+      .risk-indicator {
+        width: 120px !important;
+        height: 120px !important;
+        font-size: 50px !important;
+      }
+      
       .chart-container {
         padding: 20px;
         min-height: 400px;
@@ -1698,10 +1737,10 @@
             </div>
           </div>
           
-          <div className="chart-container">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <div className="chart-container">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '10px' }}>
               <h3>Operational Metrics Over Time</h3>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                 {usingRealData && (
                   <span style={{ 
                     background: '#10b981', 
@@ -2334,9 +2373,9 @@
             </div>
           )}
           
-          <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
+          <div className="risk-dashboard-flex" style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
             <div className="chart-container" style={{ flex: 2 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '10px' }}>
                 <h3>2-Day Probability Forecast</h3>
                 {apiStatus === 'connected' && (
                   <span style={{ 
