@@ -999,29 +999,81 @@
       // Checks if LSTM model is loaded and ready for predictions
       // ============================================================================
       useEffect(() => {
-        setLoadingProgress({ attempt: 0, total: 10, message: 'Waking up API...' });
-        // Faster retries: 1s initial delay instead of 3s (3x faster initial attempts)
-        api.healthCheck(10, 1000, (attempt, total, delay) => {
-          setLoadingProgress({ 
-            attempt, 
-            total, 
-            message: attempt === 1 ? 'Waking up API...' : `Retrying... (${attempt}/${total})` 
-          });
-        }).then(result => {
-          if (result.status === 'healthy' && result.lstm_loaded) {
-            setApiStatus('connected');
-            setLoadingProgress({ attempt: 10, total: 10, message: 'Connected!' });
-            console.log('✅ API Connected - LSTM loaded:', result.lstm_loaded, 'CatBoost loaded:', result.catboost_loaded);
-          } else {
+        const checkApiConnection = async () => {
+          // First, do a quick check (2 attempts, 2s timeout) to see if API is running
+          // This fails fast if API server isn't started
+          setLoadingProgress({ attempt: 0, total: 2, message: 'Checking API...' });
+          
+          let quickCheckFailed = false;
+          try {
+            const quickController = new AbortController();
+            const quickTimeout = setTimeout(() => quickController.abort(), 2000); // 2s timeout for quick check
+            
+            const quickResponse = await fetch(`${api.baseURL}/health`, {
+              signal: quickController.signal,
+              cache: 'no-cache'
+            });
+            
+            clearTimeout(quickTimeout);
+            
+            if (quickResponse.ok) {
+              const result = await quickResponse.json();
+              if (result.status === 'healthy' && result.lstm_loaded) {
+                setApiStatus('connected');
+                setLoadingProgress({ attempt: 2, total: 2, message: 'Connected!' });
+                console.log('✅ API Connected - LSTM loaded:', result.lstm_loaded, 'CatBoost loaded:', result.catboost_loaded);
+                // Cache the result
+                api.cache.health = result;
+                api.cache.healthTime = Date.now();
+                api.saveCache();
+                return;
+              }
+            }
+          } catch (error) {
+            // Check if it's a network error (API not running) vs timeout (API might be waking up)
+            if (error.name === 'AbortError') {
+              // Timeout - API might be waking up, continue to full retry
+              console.log('⏱️ Quick check timed out - API might be waking up, trying full retry...');
+            } else {
+              // Network error - API server is not running, fail immediately
+              console.log('❌ API server not running:', error.message);
+              setApiStatus('disconnected');
+              setLoadingProgress({ attempt: 0, total: 2, message: 'API not available' });
+              quickCheckFailed = true;
+            }
+          }
+          
+          // If quick check failed with network error, stop here
+          if (quickCheckFailed) {
+            return;
+          }
+          
+          // If we get here, API might be waking up (timeout), do full retry sequence
+          setLoadingProgress({ attempt: 0, total: 10, message: 'Waking up API...' });
+          api.healthCheck(10, 1000, (attempt, total, delay) => {
+            setLoadingProgress({ 
+              attempt, 
+              total, 
+              message: attempt === 1 ? 'Waking up API...' : `Retrying... (${attempt}/${total})` 
+            });
+          }).then(result => {
+            if (result.status === 'healthy' && result.lstm_loaded) {
+              setApiStatus('connected');
+              setLoadingProgress({ attempt: 10, total: 10, message: 'Connected!' });
+              console.log('✅ API Connected - LSTM loaded:', result.lstm_loaded, 'CatBoost loaded:', result.catboost_loaded);
+            } else {
+              setApiStatus('disconnected');
+              setLoadingProgress({ attempt: 0, total: 10, message: 'API not available' });
+              console.log('⚠️ API not available - Please start the API server');
+            }
+          }).catch(() => {
             setApiStatus('disconnected');
             setLoadingProgress({ attempt: 0, total: 10, message: 'API not available' });
             console.log('⚠️ API not available - Please start the API server');
-          }
-        }).catch(() => {
-          setApiStatus('disconnected');
-          setLoadingProgress({ attempt: 0, total: 10, message: 'API not available' });
-          console.log('⚠️ API not available - Please start the API server');
-        });
+          });
+        };
+        
+        checkApiConnection();
       }, []); // Empty dependency array = run only once on mount
       
       // ============================================================================
