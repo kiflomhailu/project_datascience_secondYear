@@ -44,3 +44,15 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.bak
+
+# Data files - DO NOT COMMIT
+latest/*.csv
+latest/*.pkl
+*.csv
+*.pkl
+
+# Model files - keep locally only
+latest/*.cbm
+
+# PDF documents
+latest/*.pdf
