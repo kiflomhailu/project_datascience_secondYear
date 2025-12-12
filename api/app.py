@@ -62,6 +62,7 @@ OPERATIONAL_VARS = {
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
+print("✓ CORS enabled for all origins")
 
 # Global variables
 models_loaded = False
