@@ -312,6 +312,24 @@ except Exception as e:
 # API ENDPOINTS
 # ============================================================================
 
+@app.route('/')
+def home():
+    """Root endpoint - API information"""
+    return jsonify({
+        'service': 'Seismic Risk Prediction API',
+        'status': 'running',
+        'version': '2.0',
+        'models_loaded': models_loaded,
+        'endpoints': {
+            'health': '/health',
+            'info': '/data/info',
+            'operational': '/data/operational',
+            'events': '/data/events',
+            'statistics': '/statistics'
+        },
+        'documentation': 'https://github.com/kiflomhailu/project_datascience_secondYear'
+    })
+
 @app.route('/health', methods=['GET'])
 def health():
     """Health check endpoint"""
