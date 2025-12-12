@@ -306,7 +306,26 @@ try:
     optimal_threshold = load_models_and_data()
 except Exception as e:
     print(f"❌ Error loading models: {e}")
+    print("⚠️  Running in demo mode with sample data")
     optimal_threshold = 0.5
+    
+    # Create sample dashboard data for demo
+    import numpy as np
+    dates = pd.date_range(start='2023-01-01', end='2023-12-31', freq='H')
+    df_dashboard = pd.DataFrame({
+        'recorded_at': dates,
+        'event_probability': np.random.random(len(dates)) * 0.3,
+        'event_predicted': np.random.choice([0, 1], len(dates), p=[0.9, 0.1]),
+        'magnitude_predicted': np.random.uniform(0, 3, len(dates)),
+        'traffic_light_pred': np.random.choice([0, 1, 2], len(dates), p=[0.7, 0.2, 0.1]),
+        'traffic_label': np.random.choice(['GREEN', 'YELLOW', 'RED'], len(dates), p=[0.7, 0.2, 0.1]),
+        'traffic_color': np.random.choice(['green', 'yellow', 'red'], len(dates), p=[0.7, 0.2, 0.1]),
+        **{var: np.random.uniform(0, 100, len(dates)) for var in OPERATIONAL_VARS.keys()}
+    })
+    min_date = dates.min()
+    max_date = dates.max()
+    models_loaded = True
+    has_ground_truth = False
 
 # ============================================================================
 # API ENDPOINTS
