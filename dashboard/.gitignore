@@ -1,0 +1,104 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Node
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data files - Sample data allowed for deployment
+# Large sensitive CSV files are excluded
+# Small sample CSV files in api/data/ are allowed
+data/*.csv
+assets/data/**/*.csv
+
+# Keep folder structure with placeholder
+!data/.gitkeep
+!data/README.md
+
+# Allow sample data in api/data folder
+!api/data/*.csv
+
+# Model files - DO NOT PUSH (too large, ~100MB+)
+*.h5
+*.pkl
+models/*.h5
+models/*.pkl
+
+# Sprint review and deploy guide (internal documents)
+# Note: docs/sprint_review.md is KEPT (previous sprint documentation)
+DEPLOY_GUIDE.md
+SETUP_COMPLETE.md
+
+# Model files - DO NOT PUSH (too large, ~100MB+)
+*.h5
+*.pkl
+models/*.h5
+models/*.pkl
+
+# Presentation and documentation files
+PRESENTATION_NOTES.md
+FRONTEND_PRESENTATION_SLIDES.md
+FRONTEND_SLIDES_CONCISE.md
+START_DASHBOARD.md
+TROUBLESHOOTING.md
+*.pdf
+*.pptx
+image/
+
+# API documentation (local only)
+api/API_GUIDE.md
+api/API_SIMPLE.md
+
+# Duplicate folder structure
+project_datascience_secondYear/
+
+# Training history images
+models/*.png
+models/*.jpg
+
+# Scripts with special characters
+scripts/✅*
+
+# Extra documentation files (keep only README.md)
+PROJECT_STRUCTURE.md
+QUICK_REFERENCE.md
+SETUP.md
+api/README.md
+scripts/README_TRAINING.md
+
+# Extra training scripts (keep only main one)
+scripts/train_lightweight.py
+scripts/train_simple.py
+scripts/test_model.py
+
+# Temporary files
+*.tmp
+*.log
+*.cache
+
+# Build
+dist/
+build/
+
+# Environment
+.env
+.env.local

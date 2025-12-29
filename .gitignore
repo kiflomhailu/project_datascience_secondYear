@@ -1,0 +1,95 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Data files - NEVER PUSH SENSITIVE DATA
+*.csv
+*.xlsx
+*.xls
+# But keep structure examples if needed (commented out for safety)
+# !python/example_data_sample.csv
+
+# Duplicate/Copy folders and files
+*- Copy*/
+**/* - Copy*
+**/*(1)*
+**/*(2)*
+**/*(3)*
+**/* copy*
+**/* Copy*
+
+# Error files
+=*
+*.tmp
+*.temp
+
+# Large PDFs and media - DO NOT PUSH
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.mp4
+*.avi
+
+# Model files - DO NOT PUSH (too large and may contain sensitive data)
+*.h5
+*.hdf5
+*.cbm
+*.pkl
+*.joblib
+*.pt
+*.pth
+*.onnx
+*.pb
+
+# Node modules (if you add any)
+node_modules/
+package-lock.json
+
+# Build outputs
+*.pyc
+dist/
+build/
+*.egg-info/
+
+# Environment variables
+.env
+.env.local
+
+# Logs
+*.log
+*.log.*
+
+# Large files and backups
+*.bak
+*.backup
+*.old
+*.orig
+
