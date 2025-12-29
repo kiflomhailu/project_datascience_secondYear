@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Geothermal Plant Seismic Monitoring Project
 
 ## 📊 Project Overview
@@ -88,11 +87,4 @@ python reverse_merge.py
 - **Sprint 1**: Data integration and dashboard prototyping
 - **Future**: Real-time data integration, enhanced ML models
 
-## 📚 Documentation
 
-See `python/README_START_HERE.txt` for detailed project guide.
-
-=======
-# project_datascience_secondYear
-Project Data Science
->>>>>>> 3d6b2231a81425af9dafe137e48e58e375f24c38
